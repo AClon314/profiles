@@ -90,28 +90,29 @@ yon "rime-ice?" && rm -rf ./rime/* && git clone https://github.com/iDvel/rime-ic
 
 
 #flatpak install -y org.winehq.Wine io.github.fastrizwaan.WineZGUI 
-flatpak install -y com.usebottles.bottles # windows
+# flatpak install -y com.usebottles.bottles # windows
 
-flatpak install -y com.obsproject.Studio org.videolan.VLC
-flatpak install -y org.kde.filelight com.tencent.WeChat  org.blender.Blender # my utils
+# flatpak install -y com.obsproject.Studio org.videolan.VLC
+# flatpak install -y org.kde.filelight com.tencent.WeChat  org.blender.Blender # my utils
 ### steam & vscode & protonUp-Qt?
 ### https://flathub.org/apps/search?q=%s
+### https://search.bilibili.com/all?keyword=%s
 title 💬virt
 sudo dnf install -y @virtualization
 
 title 💬appman
-cd ~/fedora_init_temp
-mkdir -p ~/.local/bin && 
-if ! grep -q "export PATH=\$PATH:\$(xdg-user-dir USER)/.local/bin" ~/.bashrc; then
-  echo 'export PATH=$PATH:$(xdg-user-dir USER)/.local/bin' >> ~/.bashrc &&
-  wget https://raw.githubusercontent.com/ivan-hc/AM/main/APP-MANAGER -O appman &&
-  chmod a+x ./appman &&
-  mv ./appman ~/.local/bin/appman
-else
-  echo WARNING: if you aborted and appman not installed, run `nano .bashrc` an remove line: `export PATH=\$PATH:\$\(xdg-user-dir...`
-fi
-appman
-appman -i linuxqq
+# cd ~/fedora_init_temp
+# mkdir -p ~/.local/bin && 
+# if ! grep -q "export PATH=\$PATH:\$(xdg-user-dir USER)/.local/bin" ~/.bashrc; then
+#   echo 'export PATH=$PATH:$(xdg-user-dir USER)/.local/bin' >> ~/.bashrc &&
+#   wget https://raw.githubusercontent.com/ivan-hc/AM/main/APP-MANAGER -O appman &&
+#   chmod a+x ./appman &&
+#   mv ./appman ~/.local/bin/appman
+# else
+#   echo WARNING: if you aborted and appman not installed, run `nano .bashrc` an remove line: `export PATH=\$PATH:\$\(xdg-user-dir...`
+# fi
+# appman
+# appman -i linuxqq
 
 title 💬auto-cpufreq
 git clone https://github.com/AdnanHodzic/auto-cpufreq.git ~/auto-cpufreq
@@ -140,15 +141,37 @@ fi
 #dnf install -y zsh
 #sudo lchsh $USER #/bin/zsh
 
+
+# SYSTEM
+title 💬lenovo-legion-driver
+sudo dnf copr enable -y mrduarte/LenovoLegionLinux
+sudo dnf install -y dkms-LenovoLegionLinux python-LenovoLegionLinux
+
+title 💬enable swapfile
+# sudo dd if=/dev/zero of=/swapfile bs=1G count=2 #create 2GB swapfile
+# sudo chmod 600 /swapfile
+# sudo mkswap /swapfile
+# sudo swapon /swapfile
+# echo "/swapfile swap swap defaults 0 0" | sudo tee -a /etc/fstab
+
 title 💬sysrq
 echo "1" | sudo tee /proc/sys/kernel/sysrq
 
-title grub
+title 💬grub tweak
 # grubby --args="<NEW_PARAMETER1> <NEW_PARAMETER2 <NEW_PARAMETER_n>" --update-kernel=/boot/vmlinuz-5.11.14-300.fc34.x86_64
 
 if ! grep -q "acpi_backlight" /etc/default/grub; then
   sudo sed -i 's/GRUB_CMDLINE_LINUX=""/GRUB_CMDLINE_LINUX="acpi_backlight=native amd_iommu=on iommu=pt"/g' /etc/default/grub  
+  yon "detailed text mode while booting?" && sudo sed -i 's/rhgb//g' /etc/default/grub
 fi
 yon "update grub?" && sudo grub2-mkconfig -o /boot/grub2/grub.cfg
 
 title 💬create snapshot
+git clone https://github.com/intentionally-left-nil/lvm-autosnap.git &&
+sudo mv lvm-autosnap /usr/share/lvm-autosnap &&
+cd /usr/share/lvm-autosnap &&
+sudo ./install-hook.sh &&
+echo 'add_dracutmodules+=" /usr/lib/systemd/system/lvm-autosnap "' | sudo tee /etc/dracut.conf.d/lvm-autosnap-hooks.conf &&
+sudo dracut -f &&
+sudo systemctl enable lvm-autosnap.timer
+# ./snapshot.sh create
