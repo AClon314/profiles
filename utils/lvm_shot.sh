@@ -76,7 +76,8 @@ function help {
 
 
 if [ -z "$1" ]; then
-  list
+  list_pretty
+  echo
   help
 elif [ "$1" == "auto" ]; then
   auto $2
