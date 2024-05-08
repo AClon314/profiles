@@ -1,8 +1,8 @@
 #!/bin/bash
+HOW_MANY=1
 INIT_SIZE=256M
 TARGET_LV=${2:-/dev/lvm/root} #if not set, use /dev/lvm/root
 TAG=$(basename $TARGET_LV)
-HOW_MANY=1
 
 #DON'T modify these var
 SELF0=$(basename $0) 
