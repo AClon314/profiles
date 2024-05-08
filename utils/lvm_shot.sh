@@ -2,7 +2,11 @@
 INIT_SIZE=256M
 TARGET_LV=${2:-/dev/lvm/root} #if not set, use /dev/lvm/root
 TAG=$(basename $TARGET_LV)
-HOW_MANY=0
+HOW_MANY=1
+
+#DON'T modify these var
+SELF0=$(basename $0) 
+FULL0="$(readlink -f "$0")"
 
 function title {
   echo -e -n "\033]0;$*\007"
@@ -40,12 +44,33 @@ function config {
   echo "⚠️reboot to take effect"
   echo "💡Tips: more config in $0"
 }
+function enable {
+  sudo bash -c "cat << EOF > /etc/systemd/system/$SELF0.service
+[Unit]
+Description=Run $SELF0.sh at startup
+
+[Service]
+ExecStart=$FULL0 auto
+
+[Install]
+WantedBy=multi-user.target
+EOF"
+  sudo systemctl enable $SELF0
+  sudo systemctl start $SELF0
+}
+function disable {
+  sudo systemctl stop $SELF0
+  sudo systemctl disable $SELF0
+  sudo rm /etc/systemd/system/$SELF0.service
+}
 function help {
-  echo -e "Usage:\t$0\tauto|list|recover|config"
+  echo -e "Usage:\t$0\tauto|list|recover|config|enable|disable"
   echo -e "  auto [path]\t:always keep recent $HOW_MANY shots"
   echo -e "  list\t\t:list auto-shots"
   echo -e "  recover [lv]\t:merge snapshot"
   echo -e "  config\t:edit lvm.conf to set snapshot threshold and size"
+  echo -e "  enable\t:enable startup as systemd service"
+  echo -e "  disable\t:disable startup as systemd service"
 }
 
 
@@ -59,6 +84,10 @@ elif [ "$1" == "config" ]; then
   config
 elif [ "$1" == "recover" ]; then
   recover $2
+elif [ "$1" == "enable" ]; then
+  enable
+elif [ "$1" == "disable" ]; then
+  disable
 elif [[ "$1" == *"h"* ]]; then
   help
 elif [[ "$1" == *"l"* ]]; then
