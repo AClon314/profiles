@@ -22,8 +22,8 @@ function auto {
   if [ -n "$(list)" ]; then
     # if list >= HOW_MANY
     if [ $(list|wc -l) -ge $HOW_MANY ]; then
-      # counts ALL_LINES of `list`, lvremove for ALL_LINES-HOW_MANY-1 lines in head
-      list|head -n $(($(list|wc -l)-HOW_MANY))|xargs -I {} sudo lvremove -y {}
+      # counts ALL_LINES of `list`, lvremove for ALL_LINES-HOW_MANY+1 lines in head
+      list|head -n $(($(list|wc -l)-HOW_MANY+1))|xargs -I {} sudo lvremove -y {}
     fi
   fi
 
