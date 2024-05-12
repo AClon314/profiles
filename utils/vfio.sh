@@ -92,30 +92,38 @@ function how_gpu {
   lspci_grep "NVIDIA"
   lspci_grep "Radeon" | grep Mobile -C 9
   lspci_grep "Intel.*Integrated Graphics"
-  echo
-  what_gpu
 }
-function enable_nvidia {
+function nvidia2host {
   __NV_PRIME_RENDER_OFFLOAD=1
   __GLX_VENDOR_LIBRARY_NAME=nvidia
   sudo virsh nodedev-reattach pci_0000_$PCI_GPU &&\
   echo "GPU reattached (now host ready)" &&\
-  sudo rmmod vfio_pci vfio_pci_core vfio_iommu_type1 &&\
+
+  sudo modprobe -r vfio_pci vfio_pci_core vfio_iommu_type1 &&\
   echo "VFIO drivers removed" &&\
+
   sudo modprobe -i nvidia_modeset nvidia_uvm nvidia &&\
   echo "NVIDIA drivers added" &&\
-  echo "COMPLETED! (confirm success with what)" | grep what
+
+  echo "COMPLETED."
+  lspci_grep "NVIDIA"
 }
-function disable_nvidia {
+function nvidia2vfio {
   unset __NV_PRIME_RENDER_OFFLOAD
   unset __GLX_VENDOR_LIBRARY_NAME
-  sudo rmmod nvidia_modeset nvidia_uvm nvidia &&\
+  # rmmod
+  sudo modprobe -r nvidia_modeset nvidia_uvm nvidia &&\
   echo "NVIDIA drivers removed" &&\
+
+  # -i: --ignore-install
   sudo modprobe -i vfio_pci vfio_pci_core vfio_iommu_type1 &&\
   echo "VFIO drivers added" &&\
+
   sudo virsh nodedev-detach pci_0000_$PCI_GPU &&\
   echo "GPU detached (now vfio ready)" &&\
-  echo "COMPLETED! (confirm success with hows-my-gpu and active-gpu)"
+
+  echo "COMPLETED! confirm success with what" | grep what
+  lspci_grep "NVIDIA"
 }
 function launch_looking_glass {
   looking-glass-client -s -m 97
@@ -126,25 +134,39 @@ function what_dm {
 function help {
   echo -e "Usage:\t$0 how|enable|disable|launch|help"
 }
+function about {
+  echo -e "\tCredits"
+  echo "Seamless Solution on dual-GPU laptop by"
+  echo "🐧BlandManStudios: https://www.youtube.com/watch?v=eTWf5D092VY"
+  echo
+  echo "Single GPU without logoff by"
+  echo "🐧ledisthebest: https://github.com/ledisthebest/LEDs-single-gpu-passthrough/blob/main/README.md"
+}
 
 if [ -z "$1" ]; then
   how_gpu
+  echo
+  what_gpu
   echo
   help
 elif [ "$1" == "what" ]; then
   what_gpu
 elif [ "$1" == "config" ]; then
   which_gpu
-elif [ "$1" == "enable" ]; then
-  enable_nvidia
+elif [ "$1" == "start" ]; then
+  nvidia2vfio
 elif [ "$1" == "disable" ]; then
-  disable_nvidia
+  nvidia2host
 elif [ "$1" == "launch" ]; then
   launch_looking_glass
+elif [[ "$1" == "about" ]]; then
+  about
 elif [[ "$1" == *"h"* ]]; then
   help
 elif [[ "$1" == *"l"* ]]; then
   how_gpu
+  echo
+  what_gpu
 else
   echo "Invalid command: $1"
   exit 1
