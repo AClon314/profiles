@@ -110,7 +110,7 @@ if [ -z "$1" ]; then
   helpme
 elif [ "$1" == "setup" ]; then
   if sudo dmesg | grep -e DMAR -e IOMMU > /dev/null; then
-    echo "🎉 skip iommu"
+    echo "✔ Skip iommu"
   else
     grep "iommu" /etc/default/grub >/dev/null &&\
     echo "✔ Skip add iommu in grub" ||\
@@ -118,7 +118,8 @@ elif [ "$1" == "setup" ]; then
     sudo update-grub && echo || sudo grub-mkconfig -o /boot/grub/grub.cfg
     echo "⚠️ Reboot to enable iommu"
   fi
-
+  ./lookingGlass_b7rc1.sh
+  echo
   select_gpu
   uninstall
   install
