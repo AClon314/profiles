@@ -27,13 +27,15 @@ else
 fi
 
 # IVSHMEM with kvmfr
+DISPLAY_MEM_SIZE_BYTES=$(($DISPLAY_MEM_SIZE*1024*1024))
 dkms status | grep kvmfr > /dev/null && echo "✔ Installed dkms-kvmfr" || echo "❌ Error: No dkms-kvmfr"
-sudo modprobe kvmfr static_size_mb=$DISPLAY_MEM_SIZE && echo "✔ modprobe kvmfr: ${DISPLAY_MEM_SIZE}M" || echo "❌ Error: modprobe kvmfr"
+# sudo modprobe kvmfr static_size_mb=$DISPLAY_MEM_SIZE 
+grep static_size_mb=$DISPLAY_MEM_SIZE /etc/modprobe.d/kvmfr.conf && echo "✔ modprobe kvmfr: ${DISPLAY_MEM_SIZE}M" || echo "❌ Error: modprobe kvmfr"
 if [[ $(stat -c '%U:%G' /dev/kvmfr0) ]]; then
   echo "✔ chown: $(ls -l /dev/kvmfr0)"
 else
   sudo chown $(whoami):kvm /dev/kvmfr0 &&\
-  echo "✔ Fix chown /dev/kvmfr0"
+  echo "✔ Fix chown /dev/kvmfr0" || echo "❌ Error: chown /dev/kvmfr0"
 fi
 
 # apparmor & cgroup
@@ -48,17 +50,19 @@ sudo nano +576 -l /etc/libvirt/qemu.conf
 sudo systemctl restart libvirtd.service)
 
 # qemu args: ls /etc/libvirt/qemu
-DISPLAY_MEM_SIZE_BYTES=$(($DISPLAY_MEM_SIZE*1024*1024)) 
 virsh list --name --all | xargs -I % virsh dumpxml % | grep "/dev/kvmfr0&quot;,&quot;size&quot;:$DISPLAY_MEM_SIZE_BYTES" > /dev/null && echo "✔ QEMU" ||\
 (
-echo "<qemu:commandline>
-  <qemu:arg value='-device'/>
-  <qemu:arg value='{"driver":"ivshmem-plain","id":"shmem0","memdev":"looking-glass"}'/>
-  <qemu:arg value='-object'/>
-  <qemu:arg value='{"qom-type":"memory-backend-file","id":"looking-glass","mem-path":"/dev/kvmfr0","size":$DISPLAY_MEM_SIZE_BYTES,"share":true}'/>
-</qemu:commandline>"
+echo '<domain type="kvm" xmlns:qemu="http://libvirt.org/schemas/domain/qemu/1.0">' |grep xmlns:qemu=
+echo '
+  <qemu:commandline>
+    <qemu:arg value='-device'/>
+    <qemu:arg value='{"driver":"ivshmem-plain","id":"shmem0","memdev":"looking-glass"}'/>
+    <qemu:arg value='-object'/>
+    <qemu:arg value='{"qom-type":"memory-backend-file","id":"looking-glass","mem-path":"/dev/kvmfr0","size":$DISPLAY_MEM_SIZE_BYTES,"share":true}'/>
+  </qemu:commandline>
+</domain>' | grep $DISPLAY_MEM_SIZE_BYTES -C 9 --color=always
 echo
-echo "Copy the above to XML conf of VMs"
+echo "Modify/Copy the above to XML conf of VMs"
 Yn "Are you ready?" &&\
 for vm in $(virsh list --name --all); do
   virsh edit $vm

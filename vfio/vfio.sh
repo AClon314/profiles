@@ -166,9 +166,38 @@ elif [ "$1" == "setup" ]; then
 # options vfio-pci disable_vga=1"  | sudo tee /etc/modprobe.d/vfio.conf &&\
     echo "⚠️ Reboot to enable vfio-pci"
   )
-
   uninstall
   install
+
+  echo "是否已在虚拟机内安装了virtio驱动? 稍后将优化调整xml"
+  echo "Have you installed virtio driver in Windows(or guest)? Continue will optimize XML of vm"
+  yN "Start Optimize virtio?" || exit 1
+echo '<devices>
+  <disk type="file" device="disk">
+    <driver name="qemu" type="qcow2" discard="unmap"/>
+    <target dev="sda" bus="sata→virtio"/>' | grep virtio -C 99 --color=always
+echo '
+    <input type="evdev">
+      <source dev="/dev/input/by-id/usb-PixArt_Lenovo_USB_Optical_Mouse-event-mouse"/>
+    </input>
+    <input type="evdev">
+      <source dev="/dev/input/by-path/platform-i8042-serio-0-event-kbd" grab="all" grabToggle="ctrl-ctrl" repeat="on"/>
+    </input>' | grep evdev -C 99 --color=always
+echo '
+  <sound model="ich9">
+    <hostdev mode="subsystem" type="pci" managed="yes">
+      <source>
+        <address domain="0x0000" bus="0x01" slot="0x00" function="0x0"/>
+      </source>
+      <address type="pci" domain="0x0000" bus="0x05" slot="0x00" function="0x0"/>
+    </hostdev>
+    <hostdev mode="subsystem" type="pci" managed="yes">
+      <source>
+        <address domain="0x0000" bus="0x01" slot="0x00" function="0x1"/>
+      </source>
+      <address type="pci" domain="0x0000" bus="0x06" slot="0x00" function="0x0"/>
+    </hostdev>' | grep -e subsystem -e hostdev -C 99 --color=always
+# echo 'gl no???'
 elif [ "$1" == "install" ]; then
   uninstall
   install
