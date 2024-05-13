@@ -42,15 +42,17 @@ what_gpu() {
   glxinfo | grep "vendor" --color=always # vendor=厂商
 }
 dialog_choice() {
+  echo $GPU_KEY
+
   local options=()
   for key in "${!PCI_GPU[@]}"; do
-    [[ -n ${PCI_GPU[$key]} ]] && options+=("$key" "${PCI_GPU[$key]}" "off")
+    [[ "${GPU_KEY[*]}" =~ $key ]] && default="on" || default="off"
+    [[ -n ${PCI_GPU[$key]} ]] && options+=("$key" "${PCI_GPU[$key]}" $default)
   done
 
-  # 使用dialog进行多选
   cmd=(dialog --keep-tite --separate-output --checklist "$1" 0 0 0)
   CHOICES=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
-  CHOICES=$(echo "$CHOICES" | tr '\n' ' ')
+  CHOICES=$(echo "$CHOICES" | tr '\n' ' ' | sed 's/.$//')
 }
 select_gpu() {
   has_GPU=$(len PCI_GPU)
@@ -66,7 +68,9 @@ select_gpu() {
       . /etc/os-release
       echo "❌ $PRETTY_NAME not support dialog, edit ./config.conf manually!" && exit 1)
     dialog_choice "Select GPU to passthrough"
-    sed -i "s/GPU_KEY=\(.*\)/GPU_KEY=\($CHOICES\)/g" ./config.conf
+    if [[ -n $CHOICES ]]; then
+      sed -i "s/GPU_KEY=\(.*\)/GPU_KEY=\($CHOICES\)/g" ./config.conf
+    fi
   fi
   . ./config.conf
 }
@@ -114,7 +118,7 @@ helpme() {
 about() {
   echo -e "\tCredits"
   echo "Seamless Solution on dual-GPU laptop by"
-  echo "🐧BlandManStudios: https://www.youtube.com/watch?v=eTWf5D092VY"
+  echo "🐧BlandManStudios: https://www.youtube.com/watch?v=LtgEUfpRbZA"
   echo
   echo "Single GPU without logoff by"
   echo "🐧ledisthebest: https://github.com/ledisthebest/LEDs-single-gpu-passthrough/blob/main/README.md"
@@ -132,18 +136,37 @@ elif [ "$1" == "setup" ]; then
   else
     grep "iommu" /etc/default/grub >/dev/null &&\
     echo "✔ Skip add iommu in grub" ||\
-    sudo sed -i 's/GRUB_CMDLINE_LINUX="\(.*\)"/GRUB_CMDLINE_LINUX="\1 iommu=pt amd_iommu=on intel_iommu=on"/' /etc/default/grub &&\
-    sudo update-grub && echo || sudo grub-mkconfig -o /boot/grub/grub.cfg
-    echo "⚠️ Reboot to enable iommu"
+    (
+      sudo sed -i 's/GRUB_CMDLINE_LINUX="\(.*\)"/GRUB_CMDLINE_LINUX="\1 iommu=pt amd_iommu=on intel_iommu=on"/' /etc/default/grub &&\
+      sudo update-grub && echo || sudo grub-mkconfig -o /boot/grub/grub.cfg
+      echo "⚠️ Reboot to enable iommu"
+    )
   fi
-  sudo grep Y /sys/module/nvidia_drm/parameters/modeset >/dev/null && echo "✔ nvidia_drm" || echo "⚠️ nvidia_drm"
+  sudo grep Y /sys/module/nvidia_drm/parameters/modeset >/dev/null && echo "✔ nvidia_drm on" || echo "⚠️ nvidia_drm off"
+
   lsmod | grep nouveau > /dev/null && echo "⚠️ nouveau running" || echo "✔ nouveau off"
-  lsmod | grep virtio > /dev/null && echo "✔ virtio" || echo "⚠️ virtio"
+  lsmod | grep virtio > /dev/null && echo "✔ virtio running" || echo "⚠️ virtio not running"
 
   bash $(find . -name 'lookingGlass_*' | head -n 1)
   echo
   config_gpu
   select_gpu
+
+  vd=""
+  for key in ${GPU_KEY[@]}; do
+    vd+=${V_D_GPU[$key]} && vd+=","
+    [[ -n ${V_D_AUD[$key]} ]] && vd+=${V_D_AUD[$key]} && vd+=","
+  done
+  # 去掉vd最后一个字符
+  vd=${vd%?}
+  sudo grep "ids=$vd" /etc/modprobe.d/vfio.conf > /dev/null && echo "✔ vfio-pci" ||\
+  (
+    echo "options vfio-pci ids=$vd" | sudo tee /etc/modprobe.d/vfio.conf &&\
+# echo "options vfio-pci disable_idle_d3=1
+# options vfio-pci disable_vga=1"  | sudo tee /etc/modprobe.d/vfio.conf &&\
+    echo "⚠️ Reboot to enable vfio-pci"
+  )
+
   uninstall
   install
 elif [ "$1" == "install" ]; then

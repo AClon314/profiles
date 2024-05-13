@@ -3,16 +3,19 @@
 nvidia2guest() {
   # rmmod
   sudo modprobe -r nvidia_modeset nvidia_uvm nvidia &&\
-  echo "NVIDIA drivers removed" &&\
+  echo "✔ NVIDIA drivers removed" &&\
 
   # -i: --ignore-install
   sudo modprobe -i vfio_pci vfio_pci_core vfio_iommu_type1 &&\
-  echo "VFIO drivers added" &&\
+  echo "✔ VFIO drivers added" &&\
 
-  sudo virsh nodedev-detach pci_0000_$PCI_GPU &&\
-  echo "GPU detached (now vfio ready)" &&\
+  for p in $PCI_GPU $PCI_AUD; do
+    sudo virsh nodedev-detach pci_0000_$p &&\
+    echo "✔ GPU detached" ||\
+    echo "GPU deattach failed"
+  done &&\
 
-  echo "COMPLETED! confirm success with what" | grep what
+  echo "✔ COMPLETED! confirm success with list" | grep list
   lspci_grep "NVIDIA"
 }
 about() {
