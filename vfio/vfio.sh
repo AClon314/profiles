@@ -14,70 +14,88 @@ lspci_grep() {
   grep "Kernel driver in use" --color=always
 }
 get_pci() {
+  nr=${2:-1}
   # choose $0 of first line, with replaced ':'&'.' to '_'
-  lspci_grep $* | awk 'NR==1 {print $1}' | tr ':.' '_'
+  lspci_grep $1 | awk -v nr="$nr" 'NR==nr {print $1}' | tr ':.' '_'
 }
-
-what_gpu() {
-  __NV_PRIME_RENDER_OFFLOAD=1
-  __GLX_VENDOR_LIBRARY_NAME=nvidia
-  glxinfo | grep "vendor" --color=always # vendor=厂商
+get_v_d () {
+  nr=${2:-1}
+  lspci_grep $1 | awk -v nr="$nr" 'NR==nr {match($0, /\[[0-9a-f]{4}:[0-9a-f]{4}\]/); print substr($0, RSTART+1, LLENGTH+9)}'
 }
 len() {
   lenght=0
   declare -n arr=$1 # 间接引用
   for key in "${!arr[@]}"; do
     if [[ -n "${arr[$key]}" ]]; then
-      echo -e "$key\t${arr[$key]}" | grep $key --color=always > /dev/stderr
+      # echo -e "$key\t${arr[$key]}" | grep $key --color=always > /dev/stderr
       let lenght++
     fi
   done
   echo $lenght
 }
-select_gpu() {
-  echo "PCI_GPU=$PCI_GPU"
+what_dm() {
+  systemctl status display-manager | grep "Display Manager" -A 2
+}
+what_gpu() {
+  __NV_PRIME_RENDER_OFFLOAD=1
+  __GLX_VENDOR_LIBRARY_NAME=nvidia
+  glxinfo | grep "vendor" --color=always # vendor=厂商
+}
+dialog_choice() {
+  local options=()
+  for key in "${!PCI_GPU[@]}"; do
+    [[ -n ${PCI_GPU[$key]} ]] && options+=("$key" "${PCI_GPU[$key]}" "off")
+  done
 
-  declare -A GPU   #dedicated
-  declare -A gpu_i #integrated
-  GPU[nvidia]=$(get_pci "NVIDIA")
-  if lspci_grep "Radeon" | grep Mobile > /dev/null; then
-    gpu_i[amd]=$(get_pci "Radeon")
-  else
-    GPU[amd]=$(get_pci "Radeon")
-  fi
-  gpu_i[intel]=$(get_pci "Intel.*Integrated Graphics")
+  # 使用dialog进行多选
+  cmd=(dialog --keep-tite --separate-output --checklist "$1" 0 0 0)
+  CHOICES=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
+  CHOICES=$(echo "$CHOICES" | tr '\n' ' ')
+}
+select_gpu() {
+  has_GPU=$(len PCI_GPU)
   
-  echo "⚡Dedicated"
-  has_GPU=$(len GPU)
-  echo "💻Integrated"
-  has_gpu=$(len gpu_i)
-  let all_gpu=has_GPU+has_gpu
-  
-  if [ $all_gpu -eq 0 ]; then
-    echo "No supported GPU found! check with lspci" | grep lspci
-  elif [ $all_gpu -eq 1 ]; then
+  if [ $has_GPU -eq 0 ]; then
+    echo "No supported GPU found! run lspci" | grep lspci
+  elif [ $has_GPU -eq 1 ]; then
     # TODO: support single GPU && all gpu separated
     echo Not support Single GPU yet! but you can follow this tutorial:
     echo 🌐 https://github.com/ledisthebest/LEDs-single-gpu-passthrough/blob/main/README.md
   else
-    NEW_PCI_GPU=${GPU[nvidia]}
-    if [ $NEW_PCI_GPU != $PCI_GPU ]; then
-      yN "change PCI_GPU=$PCI_GPU to $NEW_PCI_GPU?" && config PCI_GPU $NEW_PCI_GPU
-    fi
-    echo "Current only support nvidia gpu for virtual machine."
+    which dialog > /dev/null || (
+      . /etc/os-release
+      echo "❌ $PRETTY_NAME not support dialog, edit ./config.conf manually!" && exit 1)
+    dialog_choice "Select GPU to passthrough"
+    sed -i "s/GPU_KEY=\(.*\)/GPU_KEY=\($CHOICES\)/g" ./config.conf
   fi
+  . ./config.conf
 }
 how_gpu() {
   lspci_grep "NVIDIA"
   lspci_grep "Radeon" | grep Mobile -C 9
   lspci_grep "Intel.*Integrated Graphics"
 }
+config_gpu() {
+  config PCI_GPU[nvidia] $(get_pci "NVIDIA")
+  config PCI_AUD[nvidia] $(get_pci "NVIDIA" 2)
+  config V_D_GPU[nvidia] $(get_v_d "NVIDIA")
+  config V_D_AUD[nvidia] $(get_v_d "NVIDIA" 2)
+
+  if lspci_grep "Radeon" | grep Mobile > /dev/null; then
+    i="_i"
+  fi
+  config PCI_GPU[amd$i] $(get_pci "Radeon")
+  config V_D_GPU[amd$i] $(get_v_d "Radeon")
+  config V_D_AUD[amd$i] $(get_v_d "Radeon")
+
+  config PCI_GPU[intel] $(get_pci "Intel.*Integrated Graphics"| awk '{print $1}')
+  config V_D_GPU[intel] $(get_v_d "Intel.*Integrated Graphics")
+  config V_D_AUD[intel] $(get_v_d "Intel.*Integrated Graphics")
+  . ./config.conf
+}
 
 launch_looking_glass() {
   looking-glass-client -s -m 97
-}
-what_dm() {
-  systemctl status display-manager | grep "Display Manager" -A 2
 }
 install() {
   sudo mkdir -p /etc/libvirt/hooks &&\
@@ -124,6 +142,7 @@ elif [ "$1" == "setup" ]; then
 
   bash $(find . -name 'lookingGlass_*' | head -n 1)
   echo
+  config_gpu
   select_gpu
   uninstall
   install
