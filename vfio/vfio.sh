@@ -70,14 +70,16 @@ function which_gpu {
   fi
   gpu_i[intel]=$(get_pci "Intel.*Integrated Graphics")
   
+  echo "⚡Dedicated"
   has_GPU=$(len GPU)
+  echo "💻Integrated"
   has_gpu=$(len gpu_i)
   let all_gpu=has_GPU+has_gpu
   
   if [ $all_gpu -eq 0 ]; then
     echo "No supported GPU found! check with lspci" | grep lspci
   elif [ $all_gpu -eq 1 ]; then
-    # TODO: support single GPU && AMD dedicate gpu
+    # TODO: support single GPU && all gpu separated
     echo Not support Single GPU yet! but you can follow this tutorial:
     echo 🌐 https://github.com/ledisthebest/LEDs-single-gpu-passthrough/blob/main/README.md
   else
@@ -93,38 +95,7 @@ function how_gpu {
   lspci_grep "Radeon" | grep Mobile -C 9
   lspci_grep "Intel.*Integrated Graphics"
 }
-function nvidia2host {
-  __NV_PRIME_RENDER_OFFLOAD=1
-  __GLX_VENDOR_LIBRARY_NAME=nvidia
-  sudo virsh nodedev-reattach pci_0000_$PCI_GPU &&\
-  echo "GPU reattached (now host ready)" &&\
 
-  sudo modprobe -r vfio_pci vfio_pci_core vfio_iommu_type1 &&\
-  echo "VFIO drivers removed" &&\
-
-  sudo modprobe -i nvidia_modeset nvidia_uvm nvidia &&\
-  echo "NVIDIA drivers added" &&\
-
-  echo "COMPLETED."
-  lspci_grep "NVIDIA"
-}
-function nvidia2vfio {
-  unset __NV_PRIME_RENDER_OFFLOAD
-  unset __GLX_VENDOR_LIBRARY_NAME
-  # rmmod
-  sudo modprobe -r nvidia_modeset nvidia_uvm nvidia &&\
-  echo "NVIDIA drivers removed" &&\
-
-  # -i: --ignore-install
-  sudo modprobe -i vfio_pci vfio_pci_core vfio_iommu_type1 &&\
-  echo "VFIO drivers added" &&\
-
-  sudo virsh nodedev-detach pci_0000_$PCI_GPU &&\
-  echo "GPU detached (now vfio ready)" &&\
-
-  echo "COMPLETED! confirm success with what" | grep what
-  lspci_grep "NVIDIA"
-}
 function launch_looking_glass {
   looking-glass-client -s -m 97
 }
@@ -132,7 +103,8 @@ function what_dm {
   systemctl status display-manager | grep "Display Manager" -A 2
 }
 function help {
-  echo -e "Usage:\t$0 how|enable|disable|launch|help"
+  echo -e "Usage:\t$0 list|config|start|stop|looking|what|help|about"
+  echo "Manual: https://wiki.archlinux.org/title/PCI_passthrough_via_OVMF"
 }
 function about {
   echo -e "\tCredits"
@@ -149,16 +121,17 @@ if [ -z "$1" ]; then
   what_gpu
   echo
   help
-elif [ "$1" == "what" ]; then
-  what_gpu
 elif [ "$1" == "config" ]; then
   which_gpu
 elif [ "$1" == "start" ]; then
   nvidia2vfio
-elif [ "$1" == "disable" ]; then
-  nvidia2host
-elif [ "$1" == "launch" ]; then
   launch_looking_glass
+elif [ "$1" == "stop" ]; then
+  nvidia2host
+elif [ "$1" == "looking" ]; then
+  launch_looking_glass
+elif [ "$1" == "what" ]; then
+  what_gpu
 elif [[ "$1" == "about" ]]; then
   about
 elif [[ "$1" == *"h"* ]]; then
