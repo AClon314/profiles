@@ -1,12 +1,11 @@
 #!/bin/bash
 . ./config.conf
-# libkmod: ERROR ../libkmod/libkmod-config.c:712 kmod_config_parse: /etc/modprobe.d/kvmfr.conf line 4: ignoring bad line starting with 'kvmfr'
 
 BASE0=$(basename $0) 
 FULL0="$(readlink -f "$0")"
 DIR0=$(dirname $FULL0)
 
-function lspci_grep {
+lspci_grep() {
   lspci -nnk |\
   grep "$1" --color=always &&\
 
@@ -14,17 +13,17 @@ function lspci_grep {
   grep "$1" -A 3 |\
   grep "Kernel driver in use" --color=always
 }
-function get_pci {
+get_pci() {
   # choose $0 of first line, with replaced ':'&'.' to '_'
   lspci_grep $* | awk 'NR==1 {print $1}' | tr ':.' '_'
 }
 
-function what_gpu {
+what_gpu() {
   __NV_PRIME_RENDER_OFFLOAD=1
   __GLX_VENDOR_LIBRARY_NAME=nvidia
   glxinfo | grep "vendor" --color=always # vendor=厂商
 }
-function len {
+len() {
   lenght=0
   declare -n arr=$1 # 间接引用
   for key in "${!arr[@]}"; do
@@ -35,7 +34,7 @@ function len {
   done
   echo $lenght
 }
-function select_gpu {
+select_gpu() {
   echo "PCI_GPU=$PCI_GPU"
 
   declare -A GPU   #dedicated
@@ -68,32 +67,33 @@ function select_gpu {
     echo "Current only support nvidia gpu for virtual machine."
   fi
 }
-function how_gpu {
+how_gpu() {
   lspci_grep "NVIDIA"
   lspci_grep "Radeon" | grep Mobile -C 9
   lspci_grep "Intel.*Integrated Graphics"
 }
 
-function launch_looking_glass {
+launch_looking_glass() {
   looking-glass-client -s -m 97
 }
-function what_dm {
+what_dm() {
   systemctl status display-manager | grep "Display Manager" -A 2
 }
-function install {
+install() {
   sudo mkdir -p /etc/libvirt/hooks &&\
   sudo chmod +x ./* &&\
   sudo ln -s $DIR0/* /etc/libvirt/hooks/ &&\
   echo "🎉 Don't remove/rename files in $DIR0, otherwise re-install"
 }
-function uninstall {
-  ls | xargs -I % sudo rm /etc/libvirt/hooks/%
+uninstall() {
+  ls | xargs -I % sudo rm /etc/libvirt/hooks/% ||\
+  sudo find /etc/libvirt/hooks/ -type l -exec test ! -e {} \; -delete # remove broken symlink
 }
-function helpme {
-  echo -e "Usage:\t$0 list|setup|start|stop|looking|what|helpme|about"
-  echo "Manual: https://wiki.archlinux.org/title/PCI_passthrough_via_OVMF"
+helpme() {
+  echo -e "Usage:\t$0 list|setup|install|uninstall|looking|what|helpme|about"
+  echo "PCI Passthrough: https://wiki.archlinux.org/title/PCI_passthrough_via_OVMF"
 }
-function about {
+about() {
   echo -e "\tCredits"
   echo "Seamless Solution on dual-GPU laptop by"
   echo "🐧BlandManStudios: https://www.youtube.com/watch?v=eTWf5D092VY"
@@ -110,15 +110,19 @@ if [ -z "$1" ]; then
   helpme
 elif [ "$1" == "setup" ]; then
   if sudo dmesg | grep -e DMAR -e IOMMU > /dev/null; then
-    echo "✔ Skip iommu"
+    echo "✔ iommu"
   else
     grep "iommu" /etc/default/grub >/dev/null &&\
     echo "✔ Skip add iommu in grub" ||\
-    sudo sed -i 's/GRUB_CMDLINE_LINUX="\(.*\)"/GRUB_CMDLINE_LINUX="\1 iommu=pt amd_iommu=on"/' /etc/default/grub &&\
+    sudo sed -i 's/GRUB_CMDLINE_LINUX="\(.*\)"/GRUB_CMDLINE_LINUX="\1 iommu=pt amd_iommu=on intel_iommu=on"/' /etc/default/grub &&\
     sudo update-grub && echo || sudo grub-mkconfig -o /boot/grub/grub.cfg
     echo "⚠️ Reboot to enable iommu"
   fi
-  ./lookingGlass_b7rc1.sh
+  sudo grep Y /sys/module/nvidia_drm/parameters/modeset >/dev/null && echo "✔ nvidia_drm" || echo "⚠️ nvidia_drm"
+  lsmod | grep nouveau > /dev/null && echo "⚠️ nouveau running" || echo "✔ nouveau off"
+  lsmod | grep virtio > /dev/null && echo "✔ virtio" || echo "⚠️ virtio"
+
+  bash $(find . -name 'lookingGlass_*' | head -n 1)
   echo
   select_gpu
   uninstall

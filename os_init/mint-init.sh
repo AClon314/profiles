@@ -1,5 +1,5 @@
 #!/bin/bash
-function yon {
+yon() {
   while true; do
     read -p "$* [y/n]: " yn
       case $yn in
@@ -8,7 +8,7 @@ function yon {
     esac
   done
 }
-function title {
+title() {
   echo -e -n "\033]0;$*\007"
 }
 sudo apt update

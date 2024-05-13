@@ -8,16 +8,16 @@ TAG=$(basename $TARGET_LV)
 SELF0=$(basename $0) 
 FULL0="$(readlink -f "$0")"
 
-function title {
+title() {
   echo -e -n "\033]0;$*\007"
 }
-function list_pretty {
+list_pretty() {
   sudo lvs -S 'lv_attr=~^s' -o lv_path,data_percent,lv_size,origin,lv_tags,lv_time | awk 'NR==1 || /auto/'
 }
-function list {
+list() {
   sudo lvs -S 'lv_attr=~^s' -o lv_path | grep auto | awk -F: '{print $1}'
 }
-function auto {
+auto() {
   # if list is not null
   if [ -n "$(list)" ]; then
     # if list >= HOW_MANY
@@ -34,17 +34,17 @@ function auto {
     exit 1
   fi
 }
-function recover {
+recover() {
   sudo lvconvert --merge $(list|grep $1|awk '{print $1}')
 }
-function config {
+config() {
   # snapshot_autoextend_threshold
   title "threshold=85, 20%"
   sudo nano +1543 -c /etc/lvm/lvm.conf
   echo "⚠️reboot to take effect"
   echo "💡Tips: more config in $0"
 }
-function enable {
+enable() {
   sudo bash -c "cat << EOF > /etc/systemd/system/$SELF0.service
 [Unit]
 Description=Run $SELF0.sh at startup
@@ -58,12 +58,12 @@ EOF"
   sudo systemctl enable $SELF0
   sudo systemctl start $SELF0
 }
-function disable {
+disable() {
   sudo systemctl stop $SELF0
   sudo systemctl disable $SELF0
   sudo rm /etc/systemd/system/$SELF0.service
 }
-function help {
+help() {
   echo -e "Usage:\t$0\tauto|list|recover|config|enable|disable"
   echo -e "  auto [path]\t:always keep recent $HOW_MANY shots"
   echo -e "  list\t\t:list auto-shots"

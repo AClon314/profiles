@@ -1,0 +1,8 @@
+rd.driver.blacklist=nouveau
+modprobe.blacklist=nouveau
+nvidia-drm.modeset=1
+intel_iommu=on
+iommu=pt
+rd.driver.pre=vfio-pci
+vfio-pci.ids=10de:25a0,10de:2291
+module_blacklist=nouveau

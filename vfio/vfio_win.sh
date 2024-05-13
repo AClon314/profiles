@@ -2,7 +2,7 @@
 . ./config.conf
 # libkmod: ERROR ../libkmod/libkmod-config.c:712 kmod_config_parse: /etc/modprobe.d/kvmfr.conf line 4: ignoring bad line starting with 'kvmfr'
 
-function lspci_grep {
+lspci_grep() {
   lspci -nnk |\
   grep "$1" --color=always &&\
 
@@ -10,15 +10,15 @@ function lspci_grep {
   grep "$1" -A 3 |\
   grep "Kernel driver in use" --color=always
 }
-function get_pci {
+get_pci() {
   # choose $0 of first line, with replaced ':'&'.' to '_'
   lspci_grep $* | awk 'NR==1 {print $1}' | tr ':.' '_'
 }
 
-function what_gpu {
+what_gpu() {
   glxinfo | grep "vendor" --color=always # vendor=厂商
 }
-function len {
+len() {
   lenght=0
   declare -n arr=$1 # 间接引用
   for key in "${!arr[@]}"; do
@@ -29,7 +29,7 @@ function len {
   done
   echo $lenght
 }
-function select_gpu {
+select_gpu() {
   echo "PCI_GPU=$PCI_GPU"
 
   declare -A GPU   #dedicated
@@ -60,12 +60,12 @@ function select_gpu {
     echo "Current only support nvidia gpu for virtual machine."
   fi
 }
-function how_gpu {
+how_gpu() {
   lspci_grep "NVIDIA"
   lspci_grep "Radeon" | grep Mobile -C 9
   lspci_grep "Intel.*Integrated Graphics"
 }
-function nvidia2host {
+nvidia2host() {
   __NV_PRIME_RENDER_OFFLOAD=1
   __GLX_VENDOR_LIBRARY_NAME=nvidia
   sudo virsh nodedev-reattach pci_0000_$PCI_GPU &&\
@@ -80,7 +80,7 @@ function nvidia2host {
   echo "COMPLETED."
   lspci_grep "NVIDIA"
 }
-function nvidia2vfio {
+nvidia2vfio() {
   unset __NV_PRIME_RENDER_OFFLOAD
   unset __GLX_VENDOR_LIBRARY_NAME
   # rmmod
@@ -97,17 +97,17 @@ function nvidia2vfio {
   echo "COMPLETED! confirm success with what" | grep what
   lspci_grep "NVIDIA"
 }
-function launch_looking_glass {
+launch_looking_glass() {
   looking-glass-client -s -m 97
 }
-function what_dm {
+what_dm() {
   systemctl status display-manager | grep "Display Manager" -A 2
 }
-function help {
+help() {
   echo -e "Usage:\t$0 list|config|start|stop|looking|what|help|about"
   echo "Manual: https://wiki.archlinux.org/title/PCI_passthrough_via_OVMF"
 }
-function about {
+about() {
   echo -e "\tCredits"
   echo "win lite iso: https://windowsxlite.com/"
   echo "Win lite iso for cn: https://www.pc528.net/windows11/windows11-23h2"

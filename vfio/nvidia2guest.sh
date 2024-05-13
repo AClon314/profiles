@@ -1,6 +1,6 @@
 . ./config.conf
 
-function nvidia2guest {
+nvidia2guest() {
   # rmmod
   sudo modprobe -r nvidia_modeset nvidia_uvm nvidia &&\
   echo "NVIDIA drivers removed" &&\
@@ -15,7 +15,7 @@ function nvidia2guest {
   echo "COMPLETED! confirm success with what" | grep what
   lspci_grep "NVIDIA"
 }
-function about {
+about() {
   echo "目的：无缝释放实体机的nvidia显卡，直通给虚拟机"
   echo "⚠️ 不要手动运行此脚本，这应该由qemu自动运行" | grep qemu --color=always
   echo

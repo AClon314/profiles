@@ -1,6 +1,6 @@
 . ./config.conf
 
-function allGPU2guest {
+allGPU2guest() {
 set -x
 
 systemctl stop your-display-manager
@@ -36,7 +36,7 @@ modprobe vfio_virqfd
 # short_delay=1
 # echo "Beginning of startup!"
 
-# function stop_display_manager_if_running {
+# stop_display_manager_if_running() {
 #     # Stop dm using systemd
 #     if command -v systemctl; then
 #         if systemctl is-active --quiet "$1.service" ; then
@@ -106,7 +106,7 @@ modprobe vfio_virqfd
 }
 
 
-function about {
+about() {
   echo "目的：使所有GPU直通虚拟机，会退出桌面环境，导致无界面"
   echo "⚠️ 不要手动运行此脚本，这应该由qemu自动运行" | grep qemu --color=always
   echo

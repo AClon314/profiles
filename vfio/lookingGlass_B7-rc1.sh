@@ -30,7 +30,7 @@ fi
 dkms status | grep kvmfr > /dev/null && echo "✔ Installed dkms-kvmfr" || echo "❌ Error: No dkms-kvmfr"
 sudo modprobe kvmfr static_size_mb=$DISPLAY_MEM_SIZE && echo "✔ modprobe kvmfr: ${DISPLAY_MEM_SIZE}M" || echo "❌ Error: modprobe kvmfr"
 if [[ $(stat -c '%U:%G' /dev/kvmfr0) ]]; then
-  echo "✔ Permission: $(ls -l /dev/kvmfr0)"
+  echo "✔ chown: $(ls -l /dev/kvmfr0)"
 else
   sudo chown $(whoami):kvm /dev/kvmfr0 &&\
   echo "✔ Fix chown /dev/kvmfr0"

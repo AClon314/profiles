@@ -1,6 +1,6 @@
 . ./config.conf
 
-function allGPU2host {
+allGPU2host() {
 set -x
 
 sleep 10
@@ -67,7 +67,7 @@ systemctl start your-display-manager
 
 # echo "End of teardown!"
 }
-function about {
+about() {
   echo "目的：释放所有直通虚拟机的GPU，交还给实体机，启动桌面"
   echo "⚠️ 不要手动运行此脚本，这应该由qemu自动运行" | grep qemu --color=always
   echo

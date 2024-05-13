@@ -1,6 +1,6 @@
 . ./config.conf
 
-function nvidia2host {
+nvidia2host() {
   sudo virsh nodedev-reattach pci_0000_$PCI_GPU &&\
   echo "GPU reattached (now host ready)" &&\
 
@@ -14,7 +14,7 @@ function nvidia2host {
   lspci_grep "NVIDIA"
 }
 
-function about {
+about() {
   echo "目的：在虚拟机关闭后，无缝释放nvidia显卡，交还给主机"
   echo "⚠️ 不要手动运行此脚本，这应该由qemu自动运行" | grep qemu --color=always
   echo
