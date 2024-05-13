@@ -2,34 +2,6 @@
 . ./config.conf
 # libkmod: ERROR ../libkmod/libkmod-config.c:712 kmod_config_parse: /etc/modprobe.d/kvmfr.conf line 4: ignoring bad line starting with 'kvmfr'
 
-function title {
-  echo -e -n "\033]0;$*\007"
-}
-function yn {
-  yn_text="y/n"
-  case $1 in
-    [Yy]) yn_text="Y/n"; default1=$1; shift 1;;
-    [Nn]) yn_text="y/N"; default1=$1; shift 1;;
-  esac
-
-  while true; do
-    read -p "$* [$yn_text]: " key
-      case $key in
-        [Yy]) return 0 ;;
-        [Nn]) echo "Aborted" ; return 1 ;;
-        "") if [ -n "$default1" ]; then 
-            [[ "$default1" =~ [Yy] ]] && return 0 || return 1;
-          fi ;;
-    esac
-  done
-}
-function Yn {
-  yn Y $*
-}
-function yN {
-  yn N $*
-}
-
 function lspci_grep {
   lspci -nnk |\
   grep "$1" --color=always &&\
