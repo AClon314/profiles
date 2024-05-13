@@ -20,7 +20,7 @@ modprobe -r nvidia
 modprobe -r i2c_nvidia_gpu
 modprobe -r drm
 
-virsh nodedev-detach pci_0000_AB_CD_E
+virsh nodedev-detach pci_0000_$PCI_GPU
 
 modprobe vfio_pci
 modprobe vfio

@@ -10,7 +10,7 @@ modprobe -r vfio
 modprobe -r vfio_iommu_type1
 modprobe -r vfio_virqfd
 
-virsh nodedev-reattach pci_0000_AB_CD_E
+virsh nodedev-reattach pci_0000_$PCI_GPU
 
 echo 1 > /etc/class/vtconsole/vtcon0/bind
 echo 1 > /etc/class/vtconsole/vtcon1/bind

@@ -57,7 +57,7 @@ function len {
   done
   echo $lenght
 }
-function which_gpu {
+function select_gpu {
   echo "PCI_GPU=$PCI_GPU"
 
   declare -A GPU   #dedicated
@@ -153,7 +153,7 @@ if [ -z "$1" ]; then
   echo
   help
 elif [ "$1" == "config" ]; then
-  which_gpu
+  select_gpu
 elif [ "$1" == "start" ]; then
   nvidia2vfio
   launch_looking_glass

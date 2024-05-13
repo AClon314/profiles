@@ -63,7 +63,7 @@ function len {
   done
   echo $lenght
 }
-function which_gpu {
+function select_gpu {
   echo "PCI_GPU=$PCI_GPU"
 
   declare -A GPU   #dedicated
@@ -91,7 +91,7 @@ function which_gpu {
   else
     NEW_PCI_GPU=${GPU[nvidia]}
     if [ $NEW_PCI_GPU != $PCI_GPU ]; then
-      yN "change PCI_GPU=$PCI_GPU to $NEW_PCI_GPU?" && sed -i "s/PCI_GPU=\".*/PCI_GPU=\"$NEW_PCI_GPU\"/" ./config.conf
+      yN "change PCI_GPU=$PCI_GPU to $NEW_PCI_GPU?" && config PCI_GPU $NEW_PCI_GPU
     fi
     echo "Current only support nvidia gpu for virtual machine."
   fi
@@ -108,8 +108,17 @@ function launch_looking_glass {
 function what_dm {
   systemctl status display-manager | grep "Display Manager" -A 2
 }
-function help {
-  echo -e "Usage:\t$0 list|config|start|stop|looking|what|help|about"
+function install {
+  sudo mkdir -p /etc/libvirt/hooks &&\
+  sudo chmod +x ./* &&\
+  sudo ln -s $DIR0/* /etc/libvirt/hooks/ &&\
+  echo "🎉 Don't remove/rename files in $DIR0, otherwise re-install"
+}
+function uninstall {
+  ls | xargs -I % sudo rm /etc/libvirt/hooks/%
+}
+function helpme {
+  echo -e "Usage:\t$0 list|setup|start|stop|looking|what|helpme|about"
   echo "Manual: https://wiki.archlinux.org/title/PCI_passthrough_via_OVMF"
 }
 function about {
@@ -126,17 +135,26 @@ if [ -z "$1" ]; then
   echo
   what_gpu
   echo
-  help
-elif [ "$1" == "config" ]; then
-  which_gpu
+  helpme
+elif [ "$1" == "setup" ]; then
+  if sudo dmesg | grep -e DMAR -e IOMMU > /dev/null; then
+    echo "🎉 skip iommu"
+  else
+    grep "iommu" /etc/default/grub >/dev/null &&\
+    echo "✔ Skip add iommu in grub" ||\
+    sudo sed -i 's/GRUB_CMDLINE_LINUX="\(.*\)"/GRUB_CMDLINE_LINUX="\1 iommu=pt amd_iommu=on"/' /etc/default/grub &&\
+    sudo update-grub && echo || sudo grub-mkconfig -o /boot/grub/grub.cfg
+    echo "⚠️ Reboot to enable iommu"
+  fi
+
+  select_gpu
+  uninstall
+  install
 elif [ "$1" == "install" ]; then
-  sudo mkdir -p /etc/libvirt/hooks &&\
-  sudo chmod +x ./* &&\
-  sudo ln -s $DIR0/* /etc/libvirt/hooks/ &&\
-  echo "🎉 Don't remove files in $DIR0, otherwise you need to re-install"
+  uninstall
+  install
 elif [ "$1" == "uninstall" ]; then
-  Yn "uninstall?" &&\
-  ls | xargs -I % sudo rm /etc/libvirt/hooks/%
+  Yn "uninstall?" && uninstall
 elif [ "$1" == "looking" ]; then
   launch_looking_glass
 elif [ "$1" == "what" ]; then
@@ -144,7 +162,7 @@ elif [ "$1" == "what" ]; then
 elif [[ "$1" == "about" ]]; then
   about
 elif [[ "$1" == *"h"* ]]; then
-  help
+  helpme
 elif [[ "$1" == *"l"* ]]; then
   how_gpu
   echo
