@@ -1,3 +1,5 @@
+. ./config.conf
+
 function allGPU2guest {
 set -x
 

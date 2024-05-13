@@ -1,3 +1,5 @@
+. ./config.conf
+
 function nvidia2host {
   sudo virsh nodedev-reattach pci_0000_$PCI_GPU &&\
   echo "GPU reattached (now host ready)" &&\
@@ -18,7 +20,6 @@ function about {
   echo
   echo "For: After vm is closed, seamlessly release nvidia gpu from guest to host"
   echo "⚠️ Don't manually run this script, this should be auto-run by qemu" | grep qemu --color=always
-  echo "☢️ NOT FINISHED THIS SCRIPT FUNCTION YET!🚫 DON'T RUN ME!"
 }
 
 if [ -z "$1" ]; then
@@ -30,4 +31,3 @@ else
   echo "Invalid command: $1"
   exit 1
 fi
-

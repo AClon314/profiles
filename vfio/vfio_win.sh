@@ -1,5 +1,5 @@
 #!/bin/bash
-PCI_GPU="01_00_0"
+. ./config.conf
 # libkmod: ERROR ../libkmod/libkmod-config.c:712 kmod_config_parse: /etc/modprobe.d/kvmfr.conf line 4: ignoring bad line starting with 'kvmfr'
 
 function title {

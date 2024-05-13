@@ -1,3 +1,5 @@
+. ./config.conf
+
 function nvidia2guest {
   # rmmod
   sudo modprobe -r nvidia_modeset nvidia_uvm nvidia &&\
@@ -19,7 +21,6 @@ function about {
   echo
   echo "For: Seamlessly release nvidia gpu from host to guest"
   echo "⚠️ Don't manually run this script, this should be auto-run by qemu" | grep qemu --color=always
-  echo "☢️ NOT FINISHED THIS SCRIPT FUNCTION YET!🚫 DON'T RUN ME!"
 }
 
 if [ -z "$1" ]; then

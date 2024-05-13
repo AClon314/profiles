@@ -1,5 +1,5 @@
 #!/bin/bash
-PCI_GPU="01_00_0"
+. ./config.conf
 # libkmod: ERROR ../libkmod/libkmod-config.c:712 kmod_config_parse: /etc/modprobe.d/kvmfr.conf line 4: ignoring bad line starting with 'kvmfr'
 
 BASE0=$(basename $0) 
@@ -91,7 +91,7 @@ function which_gpu {
   else
     NEW_PCI_GPU=${GPU[nvidia]}
     if [ $NEW_PCI_GPU != $PCI_GPU ]; then
-      yN "change PCI_GPU=$PCI_GPU to $NEW_PCI_GPU?" && sed -i "s/PCI_GPU=\".*/PCI_GPU=\"$NEW_PCI_GPU\"/" $0
+      yN "change PCI_GPU=$PCI_GPU to $NEW_PCI_GPU?" && sed -i "s/PCI_GPU=\".*/PCI_GPU=\"$NEW_PCI_GPU\"/" ./config.conf
     fi
     echo "Current only support nvidia gpu for virtual machine."
   fi
@@ -136,9 +136,7 @@ elif [ "$1" == "install" ]; then
   echo "🎉 Don't remove files in $DIR0, otherwise you need to re-install"
 elif [ "$1" == "uninstall" ]; then
   Yn "uninstall?" &&\
-  pushd /etc/libvirt/hooks &&\
-  sudo rm ./allGPU2* ./nvidia2* ./vfio* ./qemu &&\
-  popd
+  ls | xargs -I % sudo rm /etc/libvirt/hooks/%
 elif [ "$1" == "looking" ]; then
   launch_looking_glass
 elif [ "$1" == "what" ]; then
