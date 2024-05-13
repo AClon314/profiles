@@ -1,6 +1,4 @@
 function nvidia2guest {
-  unset __NV_PRIME_RENDER_OFFLOAD
-  unset __GLX_VENDOR_LIBRARY_NAME
   # rmmod
   sudo modprobe -r nvidia_modeset nvidia_uvm nvidia &&\
   echo "NVIDIA drivers removed" &&\

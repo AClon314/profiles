@@ -2,6 +2,10 @@
 PCI_GPU="01_00_0"
 # libkmod: ERROR ../libkmod/libkmod-config.c:712 kmod_config_parse: /etc/modprobe.d/kvmfr.conf line 4: ignoring bad line starting with 'kvmfr'
 
+BASE0=$(basename $0) 
+FULL0="$(readlink -f "$0")"
+DIR0=$(dirname $FULL0)
+
 function title {
   echo -e -n "\033]0;$*\007"
 }
@@ -44,6 +48,8 @@ function get_pci {
 }
 
 function what_gpu {
+  __NV_PRIME_RENDER_OFFLOAD=1
+  __GLX_VENDOR_LIBRARY_NAME=nvidia
   glxinfo | grep "vendor" --color=always # vendor=厂商
 }
 function len {
@@ -123,11 +129,16 @@ if [ -z "$1" ]; then
   help
 elif [ "$1" == "config" ]; then
   which_gpu
-elif [ "$1" == "start" ]; then
-  nvidia2vfio
-  launch_looking_glass
-elif [ "$1" == "stop" ]; then
-  nvidia2host
+elif [ "$1" == "install" ]; then
+  sudo mkdir -p /etc/libvirt/hooks &&\
+  sudo chmod +x ./* &&\
+  sudo ln -s $DIR0/* /etc/libvirt/hooks/ &&\
+  echo "🎉 Don't remove files in $DIR0, otherwise you need to re-install"
+elif [ "$1" == "uninstall" ]; then
+  Yn "uninstall?" &&\
+  pushd /etc/libvirt/hooks &&\
+  sudo rm ./allGPU2* ./nvidia2* ./vfio* ./qemu &&\
+  popd
 elif [ "$1" == "looking" ]; then
   launch_looking_glass
 elif [ "$1" == "what" ]; then

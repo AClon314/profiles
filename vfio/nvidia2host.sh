@@ -1,6 +1,4 @@
 function nvidia2host {
-  __NV_PRIME_RENDER_OFFLOAD=1
-  __GLX_VENDOR_LIBRARY_NAME=nvidia
   sudo virsh nodedev-reattach pci_0000_$PCI_GPU &&\
   echo "GPU reattached (now host ready)" &&\
 
