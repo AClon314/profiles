@@ -9,14 +9,15 @@ nvidia2guest() {
   sudo modprobe -i vfio_pci vfio_pci_core vfio_iommu_type1 &&\
   echo "✔ VFIO drivers added" &&\
 
-  for p in $PCI_GPU $PCI_AUD; do
-    sudo virsh nodedev-detach pci_0000_$p &&\
-    echo "✔ GPU detached" ||\
-    echo "GPU deattach failed"
+  for k in $GPU_KEY; do
+    [[ -n ${PCI_GPU[$k]} ]] && sudo virsh nodedev-detach "pci_0000_${PCI_GPU[$k]}" &&\
+    [[ -n ${PCI_AUD[$k]} ]] && sudo virsh nodedev-detach "pci_0000_${PCI_AUD[$k]}"
   done &&\
+  echo "✔ GPU detached" ||\
+  echo "GPU detach failed"
 
   echo "✔ COMPLETED! confirm success with list" | grep list
-  lspci_grep "NVIDIA"
+  ./vfio list
 }
 about() {
   echo "目的：无缝释放实体机的nvidia显卡，直通给虚拟机"

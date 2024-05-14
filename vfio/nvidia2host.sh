@@ -1,11 +1,12 @@
 . ./config.conf
 
 nvidia2host() {
-  for p in $PCI_GPU $PCI_AUD; do
-    sudo virsh nodedev-reattach pci_0000_$p &&\
-    echo "✔ GPU reattached" ||\
-    echo "GPU reattach failed"
+  for k in $GPU_KEY; do
+    [[ -n ${PCI_GPU[$k]} ]] && sudo virsh nodedev-reattach "pci_0000_${PCI_GPU[$k]}" &&\
+    [[ -n ${PCI_AUD[$k]} ]] && sudo virsh nodedev-reattach "pci_0000_${PCI_AUD[$k]}"
   done &&\
+  echo "✔ GPU reattached" ||\
+  echo "GPU reattach failed"
 
   sudo modprobe -r vfio_pci vfio_pci_core vfio_iommu_type1 &&\
   echo "✔ VFIO drivers removed" &&\
@@ -13,7 +14,7 @@ nvidia2host() {
   sudo modprobe -i nvidia_modeset nvidia_uvm nvidia &&\
   echo "✔ NVIDIA drivers added" &&\
 
-  lspci_grep "NVIDIA"
+  ./vfio list
 }
 
 about() {
