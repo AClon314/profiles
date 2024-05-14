@@ -97,9 +97,13 @@ config_gpu() {
   . ./config.conf
 }
 report() {
-  dmesg -T | grep -e DMAR -e IOMMU
-  echo
-  dmesg -T | awk '/apparmor/ && /(libvirtd|qemu|vfio)/'
+  yN "🔍 check Apparmor log?" && dmesg -T | awk '/apparmor/ && /(libvirtd|qemu|vfio)/'
+  Yn "🔍 check libvirt-qemu log?" && for i in $(ls /var/log/libvirt/qemu/*.log); do
+    sudo nano +999999 $i
+  done
+  # strace -f -o strace.log virsh dumpxml $1
+  # sudo ls /var/log/libvirt/qemu/*-virtiofsd.log && sudo kill $(lsof -t /var/log/libvirt/qemu/*-virtiofsd.log)
+  yN "🗑 Clean all libvirt-qemu logs?" && echo ''| sudo tee /var/log/libvirt/qemu/*.log
 }
 
 launch_looking_glass() {
@@ -109,8 +113,8 @@ install() {
   sudo mkdir -p /etc/libvirt/hooks &&\
   sudo cp $DIR0/* /etc/libvirt/hooks/ &&\
   echo "🎉 Once you edit files in $DIR0, run
-  $0 setup
-to update to /etc/libvirt/hooks"
+    $0 i
+to update to /etc/libvirt/hooks" | grep "$0 i" -C 9 --color=always
   # sudo ln -s $DIR0/* /etc/libvirt/hooks/ &&\
 }
 uninstall() {
@@ -136,9 +140,9 @@ if [ -z "$1" ]; then
   what_gpu
   echo
   helpme
-elif [ "$1" == "setup" ]; then
-  echo "🔧 restarting libvirtd, check the popup dialoge if stuck here."
-  sudo systemctl restart libvirtd
+elif [[ "$1" == "setup" || "$1" == "s" ]]; then
+  echo "🔧 restarting service, should in < 15s"
+  sudo systemctl restart libvirtd virtlogd
   sudo chmod +x ./*
 
   if sudo dmesg | grep -e DMAR -e IOMMU > /dev/null; then
@@ -215,20 +219,20 @@ echo '
       <address type="pci" domain="0x0000" bus="0x06" slot="0x00" function="0x0"/>
     </hostdev>' | grep -e subsystem -e hostdev -C 99 --color=always
 # echo 'gl no???'
-elif [ "$1" == "install" ]; then
+elif [[ "$1" == "install" || "$1" == "i" ]]; then
   uninstall
   install
-elif [ "$1" == "uninstall" ]; then
+elif [[ "$1" == "uninstall" || "$1" == "u" ]]; then
   Yn "uninstall?" && uninstall
-elif [ "$1" == "what" ]; then
+elif [[ "$1" == "what" ]]; then
   what_gpu
-elif [ "$1" == "report" ]; then
+elif [[ "$1" == "report" || "$1" == "r" ]]; then
   report
-elif [ "$1" == "looking" ]; then
+elif [[ "$1" == "looking" ]]; then
   launch_looking_glass
 elif [[ "$1" == "about" ]]; then
   about
-elif [[ "$1" == *"h"* ]]; then
+elif [[ "$1" == *"help" || "$1" == "h" ]]; then
   helpme
 elif [[ "$1" == *"l"* ]]; then
   how_gpu
