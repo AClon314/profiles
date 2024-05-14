@@ -1,18 +1,19 @@
 #!/bin/bash
-LOG_PATH="/var/log/libvirt/qemu/custom_hooks.log"
-XML=$(sudo cat /etc/libvirt/qemu/$1.xml) # don't use virsh dumpxml, it will stuck
+LOG="/var/log/libvirt/qemu/custom_hooks.log"
+XML=$(cat /etc/libvirt/qemu/$1.xml) # don't use virsh dumpxml, it will stuck
 TITLE=$(echo $XML | xmllint --xpath 'string(/domain/title)' -)
+echo "$TITLE $*" >> $LOG
 
 if [[ $TITLE == *"-allgpu"* ]]; then
   case $2 in
     "prepare")
-      echo 1
+      echo 1 >> $LOG
       # systemctl start libvirt-nosleep@"$1"  2>&1 | tee -a /var/log/libvirt/custom_hooks.log
       # ./allGPU2guest.sh launch 2>&1 | tee -a /var/log/libvirt/custom_hooks.log
       ;;
 
     "release")
-    echo 2
+      echo 2 >> $LOG
       # systemctl stop libvirt-nosleep@"$1"  2>&1 | tee -a /var/log/libvirt/custom_hooks.log
       # ./allGPU2host.sh launch 2>&1 | tee -a /var/log/libvirt/custom_hooks.log
       ;;
@@ -20,13 +21,13 @@ if [[ $TITLE == *"-allgpu"* ]]; then
 elif [[ $TITLE == *"-nvidia"* ]]; then
   case $2 in
     "prepare")
-    echo 3
-      # ./nvidia2guest.sh launch 2>&1 | tee -a $LOG_PATH
+    echo 3 >> $LOG
+      ./nvidia2guest.sh launch 2>&1 >> $LOG
       ;;
 
     "release")
-    echo 4
-      # ./nvidia2host.sh launch 2>&1 | tee -a $LOG_PATH
+    echo 4 >> $LOG
+      ./nvidia2host.sh launch 2>&1 >> $LOG
       ;;
   esac
 fi

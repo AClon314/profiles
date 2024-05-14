@@ -96,14 +96,14 @@ config_gpu() {
   config V_D_AUD[intel] $(get_v_d "Intel.*Integrated Graphics")
   . ./config.conf
 }
-report() {
+log() {
   yN "🔍 check Apparmor log?" && dmesg -T | awk '/apparmor/ && /(libvirtd|qemu|vfio)/'
   Yn "🔍 check libvirt-qemu log?" && for i in $(ls /var/log/libvirt/qemu/*.log); do
     sudo nano +999999 $i
   done
   # strace -f -o strace.log virsh dumpxml $1
   # sudo ls /var/log/libvirt/qemu/*-virtiofsd.log && sudo kill $(lsof -t /var/log/libvirt/qemu/*-virtiofsd.log)
-  yN "🗑 Clean all libvirt-qemu logs?" && echo ''| sudo tee /var/log/libvirt/qemu/*.log
+  yN "🗑 Clean all libvirt-qemu logs?" && echo -n| sudo tee /var/log/libvirt/qemu/*.log
 }
 
 launch_looking_glass() {
@@ -226,8 +226,8 @@ elif [[ "$1" == "uninstall" || "$1" == "u" ]]; then
   Yn "uninstall?" && uninstall
 elif [[ "$1" == "what" ]]; then
   what_gpu
-elif [[ "$1" == "report" || "$1" == "r" ]]; then
-  report
+elif [[ "$1" == "lo"* ]]; then
+  log
 elif [[ "$1" == "looking" ]]; then
   launch_looking_glass
 elif [[ "$1" == "about" ]]; then
