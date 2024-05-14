@@ -6,13 +6,13 @@ nvidia2host() {
     [[ -n ${PCI_AUD[$k]} ]] && sudo virsh nodedev-reattach "pci_0000_${PCI_AUD[$k]}"
   done &&\
   echo "✔ GPU reattached" ||\
-  echo "GPU reattach failed"
+  echo "❌ GPU reattach failed"
 
   sudo modprobe -r vfio_pci vfio_pci_core vfio_iommu_type1 &&\
-  echo "✔ VFIO drivers removed" &&\
+  echo "✔ VFIO drivers removed"
 
   sudo modprobe -i nvidia_modeset nvidia_uvm nvidia &&\
-  echo "✔ NVIDIA drivers added" &&\
+  echo "✔ NVIDIA drivers added"
 
   ./vfio list
 }
