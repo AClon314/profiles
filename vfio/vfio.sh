@@ -42,8 +42,7 @@ what_gpu() {
   glxinfo | grep "vendor" --color=always # vendor=厂商
 }
 dialog_choice() {
-  echo $GPU_KEY
-
+  # echo $GPU_KEY
   local options=()
   for key in "${!PCI_GPU[@]}"; do
     [[ "${GPU_KEY[*]}" =~ $key ]] && default="on" || default="off"
@@ -97,18 +96,25 @@ config_gpu() {
   config V_D_AUD[intel] $(get_v_d "Intel.*Integrated Graphics")
   . ./config.conf
 }
+report() {
+  dmesg -T | grep -e DMAR -e IOMMU
+  echo
+  dmesg -T | awk '/apparmor/ && /(libvirtd|qemu|vfio)/'
+}
 
 launch_looking_glass() {
   looking-glass-client -s -m 97
 }
 install() {
   sudo mkdir -p /etc/libvirt/hooks &&\
-  sudo chmod +x ./* &&\
-  sudo ln -s $DIR0/* /etc/libvirt/hooks/ &&\
-  echo "🎉 Don't remove/rename files in $DIR0, otherwise re-install"
+  sudo cp $DIR0/* /etc/libvirt/hooks/ &&\
+  echo "🎉 Once you edit files in $DIR0, run
+  $0 setup
+to update to /etc/libvirt/hooks"
+  # sudo ln -s $DIR0/* /etc/libvirt/hooks/ &&\
 }
 uninstall() {
-  ls | xargs -I % sudo rm /etc/libvirt/hooks/% ||\
+  ls | xargs -I % sudo rm /etc/libvirt/hooks/%
   sudo find /etc/libvirt/hooks/ -type l -exec test ! -e {} \; -delete # remove broken symlink
 }
 helpme() {
@@ -131,6 +137,10 @@ if [ -z "$1" ]; then
   echo
   helpme
 elif [ "$1" == "setup" ]; then
+  echo "🔧 restarting libvirtd, check the popup dialoge if stuck here."
+  sudo systemctl restart libvirtd
+  sudo chmod +x ./*
+
   if sudo dmesg | grep -e DMAR -e IOMMU > /dev/null; then
     echo "✔ iommu"
   else
@@ -147,8 +157,8 @@ elif [ "$1" == "setup" ]; then
   lsmod | grep nouveau > /dev/null && echo "⚠️ nouveau running" || echo "✔ nouveau off"
   lsmod | grep virtio > /dev/null && echo "✔ virtio running" || echo "⚠️ virtio not running"
 
+  echo "🪞 looking-glass"
   bash $(find . -name 'lookingGlass_*' | head -n 1)
-  echo
   config_gpu
   select_gpu
 
@@ -168,6 +178,13 @@ elif [ "$1" == "setup" ]; then
   )
   uninstall
   install
+
+  # APPARMOR_CONFIG="$DIR0/* rix,"
+  # grep "$APPARMOR_CONFIG" /etc/apparmor.d/local/abstractions/libvirt-qemu > /dev/null && echo "✔ apparmor vfio" ||\
+  # (
+  #   echo $APPARMOR_CONFIG | sudo tee -a /etc/apparmor.d/local/abstractions/libvirt-qemu &&\
+  #   sudo systemctl restart apparmor && echo "✔ fix apparmor vfio"
+  # )
 
   echo "是否已在虚拟机内安装了virtio驱动? 稍后将优化调整xml"
   echo "Have you installed virtio driver in Windows(or guest)? Continue will optimize XML of vm"
@@ -203,10 +220,12 @@ elif [ "$1" == "install" ]; then
   install
 elif [ "$1" == "uninstall" ]; then
   Yn "uninstall?" && uninstall
-elif [ "$1" == "looking" ]; then
-  launch_looking_glass
 elif [ "$1" == "what" ]; then
   what_gpu
+elif [ "$1" == "report" ]; then
+  report
+elif [ "$1" == "looking" ]; then
+  launch_looking_glass
 elif [[ "$1" == "about" ]]; then
   about
 elif [[ "$1" == *"h"* ]]; then
@@ -216,6 +235,8 @@ elif [[ "$1" == *"l"* ]]; then
   echo
   what_gpu
 else
+  # getent group
+  
   echo "Invalid command: $1"
   exit 1
 fi

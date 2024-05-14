@@ -30,7 +30,7 @@ fi
 DISPLAY_MEM_SIZE_BYTES=$(($DISPLAY_MEM_SIZE*1024*1024))
 dkms status | grep kvmfr > /dev/null && echo "✔ Installed dkms-kvmfr" || echo "❌ Error: No dkms-kvmfr"
 # sudo modprobe kvmfr static_size_mb=$DISPLAY_MEM_SIZE 
-grep static_size_mb=$DISPLAY_MEM_SIZE /etc/modprobe.d/kvmfr.conf && echo "✔ modprobe kvmfr: ${DISPLAY_MEM_SIZE}M" || echo "❌ Error: modprobe kvmfr"
+grep static_size_mb=$DISPLAY_MEM_SIZE /etc/modprobe.d/kvmfr.conf > /dev/null && echo "✔ modprobe kvmfr: ${DISPLAY_MEM_SIZE}M" || echo "❌ Error: modprobe kvmfr"
 if [[ $(stat -c '%U:%G' /dev/kvmfr0) ]]; then
   echo "✔ chown: $(ls -l /dev/kvmfr0)"
 else
@@ -39,7 +39,7 @@ else
 fi
 
 # apparmor & cgroup
-grep "/dev/kvmfr0 rw" /etc/apparmor.d/local/abstractions/libvirt-qemu >/dev/null && echo "✔ AppArmor" ||\
+grep "/dev/kvmfr0 rw" /etc/apparmor.d/local/abstractions/libvirt-qemu >/dev/null && echo "✔ AppArmor looking glass" ||\
 echo "# Looking Glass
 /dev/kvmfr0 rw," | sudo tee -a /etc/apparmor.d/local/abstractions/libvirt-qemu || echo "❌ Error: AppArmor (Maybe you have to fix it manually with SElinux Rule on Redhat,Fedora...)"
 sudo grep "/dev/kvmfr0" /etc/libvirt/qemu.conf > /dev/null && echo "✔ cgroups" ||\
