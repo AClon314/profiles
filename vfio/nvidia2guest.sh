@@ -3,7 +3,7 @@
 set -x
 nvidia2guest() {
   # rmmod
-  sudo modprobe -r nvidia_modeset nvidia_uvm nvidia &&\
+  sudo modprobe nvidia_modeset nvidia_uvm nvidia &&\
   echo "✔ NVIDIA drivers removed" || { echo "❌ NVIDIA drivers remove" && exit 1; }
 
   # -i: --ignore-install
