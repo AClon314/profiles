@@ -34,6 +34,10 @@ auto() {
     exit 1
   fi
 }
+remove () {
+  sudo lvremove $(list|awk '{print $1}') ||\
+  { list | xargs -I % sudo lsof % && echo "❌ remove failed" && exit 1; }
+}
 recover() {
   sudo lvconvert --merge $(list|grep $1|awk '{print $1}')
 }
@@ -63,14 +67,19 @@ disable() {
   sudo systemctl disable $SELF0
   sudo rm /etc/systemd/system/$SELF0.service
 }
+mapper() {
+  list | xargs -I % sudo lvchange --refresh --addtag noudevsync %
+}
 help() {
-  echo -e "Usage:\t$0\tauto|list|recover|config|enable|disable"
+  echo -e "Usage:\t$0\tauto|list|recover|remove|config|enable|disable|mapper"
   echo -e "  auto [path]\t:always keep recent $HOW_MANY shots"
   echo -e "  list\t\t:list auto-shots"
   echo -e "  recover [lv]\t:merge snapshot"
+  echo -e "  remove\t:remove all auto-shots"
   echo -e "  config\t:edit lvm.conf to set snapshot threshold and size"
   echo -e "  enable\t:enable startup as systemd service"
   echo -e "  disable\t:disable startup as systemd service"
+  echo -e "  mapper\t:show snapshot in /dev/mapper"
 }
 
 
@@ -85,10 +94,14 @@ elif [ "$1" == "config" ]; then
   config
 elif [ "$1" == "recover" ]; then
   recover $2
+elif [ "$1" == "remove" ]; then
+  remove
 elif [ "$1" == "enable" ]; then
   enable
 elif [ "$1" == "disable" ]; then
   disable
+elif [ "$1" == "mapper" ]; then
+  mapper
 elif [[ "$1" == *"h"* ]]; then
   help
 elif [[ "$1" == *"l"* ]]; then
