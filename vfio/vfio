@@ -139,6 +139,11 @@ check() {
     )
   fi
   sudo grep Y /sys/module/nvidia_drm/parameters/modeset >/dev/null && echo "✔ nvidia_drm on" || echo "⚠️ nvidia_drm off"
+  grep vfio /etc/modules > /dev/null && echo "✔ vfio" ||\
+  { echo "vfio
+vfio_iommu_type1
+vfio_pci
+vfio_virqfd" | sudo tee -a /etc/modules >/dev/null && sudo update-initramfs -u -k all && echo "⚠️ Fixed, reboot to enable vfio"; }
 
   lsmod | grep nouveau > /dev/null && echo "⚠️ nouveau running" || echo "✔ nouveau off"
   lsmod | grep virtio > /dev/null && echo "✔ virtio running" || echo "⚠️ virtio not running"
