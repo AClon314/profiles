@@ -5,3 +5,9 @@ nvidia              56274944  34 nvidia_uvm,nvidia_modeset
 drm_kms_helper        274432  5 drm_display_helper,amdgpu,nvidia_drm
 drm                   765952  34 gpu_sched,drm_kms_helper,drm_suballoc_helper,drm_display_helper,nvidia,drm_buddy,amdgpu,drm_ttm_helper,nvidia_drm,ttm,amdxcp
 video                  73728  3 amdgpu,ideapad_laptop,nvidia_modeset
+
+alsa-base.conf                  blacklist-framebuffer.conf   intel-microcode-blacklist.conf
+amd64-microcode-blacklist.conf  blacklist-modem.conf         iwlwifi.conf
+blacklist-ath_pci.conf          blacklist-oss.conf           kvmfr.conf
+blacklist.conf                  blacklist-rare-network.conf  nvidia-graphics-drivers-kms.conf
+blacklist-firewire.conf         dkms.conf                    vfio.conf

@@ -134,16 +134,25 @@ h2o_xorg() {
   echo "${segments[0]}:${segments[1]}:${segments[2]}"
 }
 fix_xorg() {
+  # xorg不使用nvidia卡，则无法外接显示器
+  # https://bbs.archlinux.org/viewtopic.php?id=286506
   # https://stackoverflow.com/questions/18382271/how-can-i-modify-xorg-conf-file-to-force-x-server-to-run-on-a-specific-gpu-i-a
   local PCI_XORG=$(h2o_xorg ${PCI_GPU[$XORG_KEY]})
   { grep $PCI_XORG $XORG_CONFIG > /dev/null && grep "Driver \"$XORG_DRIVER_NAME\"" $XORG_CONFIG > /dev/null;  } &&\
-  echo "✔ xorg only use integrate gpu" ||\
+  echo "✔ xorg only use $XORG_DRIVER_NAME" ||\
   { echo "Section \"Device\"
     Identifier \"Device0\"
     Driver \"$XORG_DRIVER_NAME\"
     BusID \"PCI:$PCI_XORG\"
 EndSection" | sudo tee $XORG_CONFIG > /dev/null &&\
   echo "⚠️ Fixed, reboot to release $GPU_KEY from xorg"; }
+
+  # wayland/mesa
+  # grep "MESA_LOADER_DRIVER_OVERRIDE=$XORG_DRIVER_NAME" /etc/environment > /dev/null && echo "✔ wayland/mesa only use $XORG_DRIVER_NAME" ||\
+  # { grep -q 'MESA_LOADER_DRIVER_OVERRIDE=' /etc/environment &&\
+  #   sudo sed -i "s/MESA_LOADER_DRIVER_OVERRIDE=\(.*\)/MESA_LOADER_DRIVER_OVERRIDE=$XORG_DRIVER_NAME/" /etc/environment ||\
+  #   echo 'MESA_LOADER_DRIVER_OVERRIDE=$XORG_DRIVER_NAME' | sudo tee -a /etc/environment &&\
+  #   echo "⚠️ Fixed wayland only use $XORG_DRIVER_NAME" ;}
 }
 checkAndFix() {
   echo "🔧 restarting service, should in < 15s"
@@ -167,7 +176,7 @@ checkAndFix() {
   grep vfio /etc/modules > /dev/null && echo "✔ vfio enable" ||\
   { echo "vfio" | sudo tee -a /etc/modules >/dev/null && sudo update-initramfs -u -k all && echo "⚠️ Fixed, reboot to enable vfio startup" || echo "❌ Fail to fix vfio startup"; }
   lsmod | grep vfio > /dev/null && echo "✔ vfio running" || echo "⚠️ vfio not running"
-  fix_xorg
+  # fix_xorg
 }
 
 xml_optimize() {
