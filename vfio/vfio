@@ -122,6 +122,25 @@ uninstall() {
   ls | xargs -I % sudo rm /etc/libvirt/hooks/%
   sudo find /etc/libvirt/hooks/ -type l -exec test ! -e {} \; -delete # remove broken symlink
 }
+h2o_xorg() {
+  # 0A_00_1 to 10:00:1
+  IFS='_' read -r -a segments <<< "$1"
+  for index in "${!segments[@]}"; do
+    segments[index]=$((16#${segments[index]}))
+  done
+  echo "${segments[0]}:${segments[1]}:${segments[2]}"
+}
+fix_xorg() {
+  # https://stackoverflow.com/questions/18382271/how-can-i-modify-xorg-conf-file-to-force-x-server-to-run-on-a-specific-gpu-i-a
+  local PCI_XORG=$(h2o_xorg ${PCI_GPU[$XORG_KEY]})
+  { grep $PCI_XORG $XORG_CONFIG > /dev/null && grep "Driver \"$XORG_DRIVER_NAME\"" $XORG_CONFIG > /dev/null;  } ||\
+  { echo "Section \"Device\"
+    Identifier \"Device0\"
+    Driver \"$XORG_DRIVER_NAME\"
+    BusID \"PCI:$PCI_XORG\"
+EndSection" | sudo tee $XORG_CONFIG > /dev/null &&\
+  echo "⚠️ Fixed, reboot to release $GPU_KEY from xorg"; }
+}
 check() {
   echo "🔧 restarting service, should in < 15s"
   sudo systemctl restart libvirtd virtlogd
@@ -143,7 +162,8 @@ check() {
   { echo "vfio
 vfio_iommu_type1
 vfio_pci
-vfio_virqfd" | sudo tee -a /etc/modules >/dev/null && sudo update-initramfs -u -k all && echo "⚠️ Fixed, reboot to enable vfio"; }
+vfio_virqfd" | sudo tee -a /etc/modules >/dev/null && sudo update-initramfs -u -k all && echo "⚠️ Fixed, reboot to enable vfio(外接显示器可能失效，需要重启vfio模块才能临时恢复)"; }
+  fix_xorg
 
   lsmod | grep nouveau > /dev/null && echo "⚠️ nouveau running" || echo "✔ nouveau off"
   lsmod | grep virtio > /dev/null && echo "✔ virtio running" || echo "⚠️ virtio not running"
@@ -231,7 +251,8 @@ elif [[ "$1" == "uninstall" || "$1" == "u" ]]; then
 elif [[ "$1" == "what" ]]; then
   what_gpu
 elif [[ "$1" == "lo"* ]]; then
-  log
+  fix_xorg
+  # log
 elif [[ "$1" == "looking" ]]; then
   launch_looking_glass
 elif [[ "$1" == "about" ]]; then
@@ -243,8 +264,7 @@ elif [[ "$1" == *"l"* ]]; then
   echo
   what_gpu
 else
-  # getent group
-  
   echo "Invalid command: $1"
   exit 1
 fi
+# getent group
