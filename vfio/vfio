@@ -122,26 +122,7 @@ uninstall() {
   ls | xargs -I % sudo rm /etc/libvirt/hooks/%
   sudo find /etc/libvirt/hooks/ -type l -exec test ! -e {} \; -delete # remove broken symlink
 }
-helpme() {
-  echo -e "Usage:\t$0 list|setup|install|uninstall|looking|what|helpme|about"
-  echo "PCI Passthrough: https://wiki.archlinux.org/title/PCI_passthrough_via_OVMF"
-}
-about() {
-  echo -e "\tCredits"
-  echo "Seamless Solution on dual-GPU laptop by"
-  echo "🐧BlandManStudios: https://www.youtube.com/watch?v=LtgEUfpRbZA"
-  echo
-  echo "Single GPU without logoff by"
-  echo "🐧ledisthebest: https://github.com/ledisthebest/LEDs-single-gpu-passthrough/blob/main/README.md"
-}
-
-if [ -z "$1" ]; then
-  how_gpu
-  echo
-  what_gpu
-  echo
-  helpme
-elif [[ "$1" == "setup" || "$1" == "s" ]]; then
+check() {
   echo "🔧 restarting service, should in < 15s"
   sudo systemctl restart libvirtd virtlogd
   sudo chmod +x ./*
@@ -161,36 +142,9 @@ elif [[ "$1" == "setup" || "$1" == "s" ]]; then
 
   lsmod | grep nouveau > /dev/null && echo "⚠️ nouveau running" || echo "✔ nouveau off"
   lsmod | grep virtio > /dev/null && echo "✔ virtio running" || echo "⚠️ virtio not running"
+}
 
-  echo "🪞 looking-glass"
-  bash $(find . -name 'lookingGlass_*' | head -n 1)
-  config_gpu
-  select_gpu
-
-  vd=""
-  for key in ${GPU_KEY[@]}; do
-    vd+=${V_D_GPU[$key]} && vd+=","
-    [[ -n ${V_D_AUD[$key]} ]] && vd+=${V_D_AUD[$key]} && vd+=","
-  done
-  # 去掉vd最后一个字符
-  vd=${vd%?}
-  sudo grep "ids=$vd" /etc/modprobe.d/vfio.conf > /dev/null && echo "✔ vfio-pci" ||\
-  (
-    echo "options vfio-pci ids=$vd" | sudo tee /etc/modprobe.d/vfio.conf &&\
-# echo "options vfio-pci disable_idle_d3=1
-# options vfio-pci disable_vga=1"  | sudo tee /etc/modprobe.d/vfio.conf &&\
-    echo "⚠️ Reboot to enable vfio-pci"
-  )
-  uninstall
-  install
-
-  # APPARMOR_CONFIG="$DIR0/* rix,"
-  # grep "$APPARMOR_CONFIG" /etc/apparmor.d/local/abstractions/libvirt-qemu > /dev/null && echo "✔ apparmor vfio" ||\
-  # (
-  #   echo $APPARMOR_CONFIG | sudo tee -a /etc/apparmor.d/local/abstractions/libvirt-qemu &&\
-  #   sudo systemctl restart apparmor && echo "✔ fix apparmor vfio"
-  # )
-
+xml_optimize() {
   echo "是否已在虚拟机内安装了virtio驱动? 稍后将优化调整xml"
   echo "Have you installed virtio driver in Windows(or guest)? Continue will optimize XML of vm"
   yN "Start Optimize virtio?" || exit 1
@@ -220,6 +174,50 @@ echo '
       <address type="pci" domain="0x0000" bus="0x06" slot="0x00" function="0x0"/>
     </hostdev>' | grep -e subsystem -e hostdev -C 99 --color=always
 # echo 'gl no???'
+}
+helpme() {
+  echo -e "Usage:\t$0 list|setup|install|uninstall|looking|what|helpme|about"
+  echo "PCI Passthrough: https://wiki.archlinux.org/title/PCI_passthrough_via_OVMF"
+}
+about() {
+  echo -e "\tCredits"
+  echo "Seamless Solution on dual-GPU laptop by"
+  echo "🐧BlandManStudios: https://www.youtube.com/watch?v=LtgEUfpRbZA"
+  echo
+  echo "Single GPU without logoff by"
+  echo "🐧ledisthebest: https://github.com/ledisthebest/LEDs-single-gpu-passthrough/blob/main/README.md"
+}
+
+if [ -z "$1" ]; then
+  how_gpu
+  echo
+  what_gpu
+  echo
+  helpme
+elif [[ "$1" == "setup" || "$1" == "s" ]]; then
+  check
+  echo "🪞 looking-glass" && bash $(find . -name 'lookingGlass_*' | head -n 1)
+  config_gpu
+  select_gpu
+
+  vd=""
+  for key in ${GPU_KEY[@]}; do
+    vd+=${V_D_GPU[$key]} && vd+=","
+    [[ -n ${V_D_AUD[$key]} ]] && vd+=${V_D_AUD[$key]} && vd+=","
+  done
+  # 去掉vd最后一个字符
+  vd=${vd%?}
+  sudo grep "ids=$vd" /etc/modprobe.d/vfio.conf > /dev/null && echo "✔ vfio-pci" ||\
+  (
+    echo "options vfio-pci ids=$vd" | sudo tee /etc/modprobe.d/vfio.conf &&\
+# echo "options vfio-pci disable_idle_d3=1
+# options vfio-pci disable_vga=1"  | sudo tee /etc/modprobe.d/vfio.conf &&\
+    echo "⚠️ Reboot to enable vfio-pci"
+  )
+
+  uninstall
+  install
+  xml_optimize
 elif [[ "$1" == "install" || "$1" == "i" ]]; then
   uninstall
   install
