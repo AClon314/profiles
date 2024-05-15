@@ -97,14 +97,17 @@ config_gpu() {
   . ./config.conf
 }
 log() {
-  yN "🔍 check Apparmor log?" && dmesg -T | awk '/apparmor/ && /(libvirtd|qemu|vfio)/'
-  Yn "🔍 check libvirt-qemu log?" && for i in $(ls /var/log/libvirt/qemu/*.log); do
-    sudo nano +999999 $i
-  done
+  dmesg -T | awk '/apparmor/ && /(libvirtd|qemu|vfio)/'
+  Yn "🔍 check libvirt-qemu log?" && {\
+    for i in $(ls /var/log/libvirt/qemu/*.log); do
+      sudo nano +999999 $i
+    done
+    yN "🗑 Clean all libvirt-qemu logs?" && echo -n| sudo tee /var/log/libvirt/qemu/*.log;
+  }
   # strace -f -o strace.log virsh dumpxml $1
   # sudo ls /var/log/libvirt/qemu/*-virtiofsd.log && sudo kill $(lsof -t /var/log/libvirt/qemu/*-virtiofsd.log)
-  yN "🗑 Clean all libvirt-qemu logs?" && echo -n| sudo tee /var/log/libvirt/qemu/*.log
-  Yn "🔍 check who is using nvidia?" && sudo lsof -w /dev/nvidia*
+  lsmod | grep -i nvidia --color=always
+  sudo lsof -w /dev/nvidia*
 }
 
 launch_looking_glass() {
@@ -133,7 +136,8 @@ h2o_xorg() {
 fix_xorg() {
   # https://stackoverflow.com/questions/18382271/how-can-i-modify-xorg-conf-file-to-force-x-server-to-run-on-a-specific-gpu-i-a
   local PCI_XORG=$(h2o_xorg ${PCI_GPU[$XORG_KEY]})
-  { grep $PCI_XORG $XORG_CONFIG > /dev/null && grep "Driver \"$XORG_DRIVER_NAME\"" $XORG_CONFIG > /dev/null;  } ||\
+  { grep $PCI_XORG $XORG_CONFIG > /dev/null && grep "Driver \"$XORG_DRIVER_NAME\"" $XORG_CONFIG > /dev/null;  } &&\
+  echo "✔ xorg only use integrate gpu" ||\
   { echo "Section \"Device\"
     Identifier \"Device0\"
     Driver \"$XORG_DRIVER_NAME\"
@@ -141,13 +145,13 @@ fix_xorg() {
 EndSection" | sudo tee $XORG_CONFIG > /dev/null &&\
   echo "⚠️ Fixed, reboot to release $GPU_KEY from xorg"; }
 }
-check&fix() {
+checkAndFix() {
   echo "🔧 restarting service, should in < 15s"
   sudo systemctl restart libvirtd virtlogd
   sudo chmod +x ./*
 
   if sudo dmesg | grep -e DMAR -e IOMMU > /dev/null; then
-    echo "✔ iommu"
+    echo "✔ grub iommu"
   else
     grep "iommu" /etc/default/grub >/dev/null &&\
     echo "✔ Skip add iommu in grub" ||\
@@ -157,16 +161,13 @@ check&fix() {
       echo "⚠️ Reboot to enable iommu"
     )
   fi
-  sudo grep Y /sys/module/nvidia_drm/parameters/modeset >/dev/null && echo "✔ nvidia_drm on" || echo "⚠️ nvidia_drm off"
-  grep vfio /etc/modules > /dev/null && echo "✔ vfio" ||\
-  { echo "vfio
-vfio_iommu_type1
-vfio_pci
-vfio_virqfd" | sudo tee -a /etc/modules >/dev/null && sudo update-initramfs -u -k all && echo "⚠️ Fixed, reboot to enable vfio(外接显示器可能失效，需要重启vfio模块才能临时恢复)"; }
-  fix_xorg
+  # sudo grep Y /sys/module/nvidia_drm/parameters/modeset >/dev/null && echo "✔ nvidia_drm modeset" || echo "⚠️ nvidia_drm modeset off"
 
   lsmod | grep nouveau > /dev/null && echo "⚠️ nouveau running" || echo "✔ nouveau off"
-  lsmod | grep virtio > /dev/null && echo "✔ virtio running" || echo "⚠️ virtio not running"
+  grep vfio /etc/modules > /dev/null && echo "✔ vfio enable" ||\
+  { echo "vfio" | sudo tee -a /etc/modules >/dev/null && sudo update-initramfs -u -k all && echo "⚠️ Fixed, reboot to enable vfio startup" || echo "❌ Fail to fix vfio startup"; }
+  lsmod | grep vfio > /dev/null && echo "✔ vfio running" || echo "⚠️ vfio not running"
+  fix_xorg
 }
 
 xml_optimize() {
@@ -220,7 +221,7 @@ if [ -z "$1" ]; then
   echo
   helpme
 elif [[ "$1" == "setup" || "$1" == "s" ]]; then
-  check&fix
+  checkAndFix
   echo "🪞 looking-glass" && bash $(find . -name 'lookingGlass_*' | head -n 1)
   config_gpu
   select_gpu
@@ -232,7 +233,7 @@ elif [[ "$1" == "setup" || "$1" == "s" ]]; then
   done
   # 去掉vd最后一个字符
   vd=${vd%?}
-  sudo grep "ids=$vd" /etc/modprobe.d/vfio.conf > /dev/null && echo "✔ vfio-pci" ||\
+  sudo grep "ids=$vd" /etc/modprobe.d/vfio.conf > /dev/null && echo "✔ vfio-pci option $vd" ||\
   (
     echo "options vfio-pci ids=$vd" | sudo tee /etc/modprobe.d/vfio.conf &&\
 # echo "options vfio-pci disable_idle_d3=1
