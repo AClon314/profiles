@@ -1,6 +1,8 @@
 . ./config.conf
 
 nvidia2host() {
+  set -x #debug
+
   for k in $GPU_KEY; do
     [[ -n ${PCI_GPU[$k]} ]] && sudo virsh nodedev-reattach "pci_0000_${PCI_GPU[$k]}" &&\
     [[ -n ${PCI_AUD[$k]} ]] && sudo virsh nodedev-reattach "pci_0000_${PCI_AUD[$k]}"

@@ -1,10 +1,15 @@
 . ./config.conf
 
-set -x
 nvidia2guest() {
+  set -x #debug
+
   # rmmod
-  sudo rmmod nvidia_drm nvidia_modeset nvidia_uvm nvidia &&\
-  echo "✔ NVIDIA drivers removed" || { echo "❌ NVIDIA drivers remove" && exit 1; }
+  local rmmod_log=$(sudo rmmod nvidia_drm nvidia_modeset nvidia_uvm nvidia)
+  if [[ $? -eq 0 ]]; then
+    echo "✔ NVIDIA drivers removed"
+  else
+    [[ $rmmod_log != *"is not currently loaded"* ]] && echo "❌ NVIDIA drivers remove" && exit 1;
+  fi
 
   # -i: --ignore-install
   sudo modprobe -i vfio_pci vfio_pci_core vfio_iommu_type1 &&\
