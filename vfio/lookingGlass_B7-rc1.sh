@@ -35,7 +35,7 @@ if [[ $(stat -c '%U:%G' /dev/kvmfr0) ]]; then
   echo "✔ chown: $(ls -l /dev/kvmfr0)"
 else
   sudo chown $(whoami):kvm /dev/kvmfr0 &&\
-  echo "✔ Fix chown /dev/kvmfr0" || echo "❌ Error: chown /dev/kvmfr0"
+  echo "🔧 Fixed chown /dev/kvmfr0" || echo "❌ Error: chown /dev/kvmfr0"
 fi
 
 # apparmor & cgroup
