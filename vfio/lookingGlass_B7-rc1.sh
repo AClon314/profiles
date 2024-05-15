@@ -50,21 +50,19 @@ sudo nano +576 -l /etc/libvirt/qemu.conf
 sudo systemctl restart libvirtd.service)
 
 # qemu args: ls /etc/libvirt/qemu
-virsh list --name --all | xargs -I % virsh dumpxml % | grep "/dev/kvmfr0&quot;,&quot;size&quot;:$DISPLAY_MEM_SIZE_BYTES" > /dev/null && echo "✔ QEMU" ||\
-(
-echo '<domain type="kvm" xmlns:qemu="http://libvirt.org/schemas/domain/qemu/1.0">' |grep xmlns:qemu=
-echo '
-  <qemu:commandline>
-    <qemu:arg value='-device'/>
-    <qemu:arg value='{"driver":"ivshmem-plain","id":"shmem0","memdev":"looking-glass"}'/>
-    <qemu:arg value='-object'/>
-    <qemu:arg value='{"qom-type":"memory-backend-file","id":"looking-glass","mem-path":"/dev/kvmfr0","size":$DISPLAY_MEM_SIZE_BYTES,"share":true}'/>
-  </qemu:commandline>
-</domain>' | grep $DISPLAY_MEM_SIZE_BYTES -C 9 --color=always
-echo
-echo "Modify/Copy the above to XML conf of VMs"
-Yn "Are you ready?" &&\
 for vm in $(virsh list --name --all); do
-  virsh edit $vm
+  virsh dumpxml $vm | grep "/dev/kvmfr0&quot;,&quot;size&quot;:$DISPLAY_MEM_SIZE_BYTES" > /dev/null && echo "✔ QEMU" ||\
+  {
+echo '<domain type="kvm" xmlns:qemu="http://libvirt.org/schemas/domain/qemu/1.0">' |grep "xmlns:qemu=" --color=always
+echo "  <qemu:commandline>
+    <qemu:arg value='-device'/>
+    <qemu:arg value='{\"driver\":\"ivshmem-plain\",\"id\":\"shmem0\",\"memdev\":\"looking-glass\"}'/>
+    <qemu:arg value='-object'/>
+    <qemu:arg value='{\"qom-type\":\"memory-backend-file\",\"id\":\"looking-glass\",\"mem-path\":\"/dev/kvmfr0\",\"size\":$DISPLAY_MEM_SIZE_BYTES,\"share\":true}'/>
+  </qemu:commandline>
+</domain>
+"  | grep $DISPLAY_MEM_SIZE_BYTES -C 9 --color=always
+  echo "Modify/Copy the above to XML conf of VMs"
+  Yn "Are you ready?" && virsh edit $vm;
+}
 done
-)
