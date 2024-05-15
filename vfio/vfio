@@ -104,7 +104,7 @@ log() {
   # strace -f -o strace.log virsh dumpxml $1
   # sudo ls /var/log/libvirt/qemu/*-virtiofsd.log && sudo kill $(lsof -t /var/log/libvirt/qemu/*-virtiofsd.log)
   yN "🗑 Clean all libvirt-qemu logs?" && echo -n| sudo tee /var/log/libvirt/qemu/*.log
-  Yn "🔍 check who is using nvidia gpu?" && sudo lsof /dev/nvidia0
+  Yn "🔍 check who is using nvidia?" && sudo lsof -w /dev/nvidia*
 }
 
 launch_looking_glass() {
