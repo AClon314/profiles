@@ -10,10 +10,10 @@ nvidia2host() {
   echo "✔ GPU reattached" ||\
   echo "❌ GPU reattach failed"
 
-  sudo modprobe -r vfio_pci vfio_pci_core vfio_iommu_type1 &&\
+  sudo modprobe -r vfio_pci vfio_pci_core vfio_iommu_type1 vfio &&\
   echo "✔ VFIO drivers removed"
 
-  sudo modprobe -i nvidia_modeset nvidia_uvm nvidia &&\
+  sudo modprobe -i nvidia nvidia_modeset nvidia_uvm nvidia_drm drm_kms_helper i2c_nvidia_gpu drm &&\
   echo "✔ NVIDIA drivers added"
 
   ./vfio list

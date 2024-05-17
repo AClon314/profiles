@@ -4,7 +4,7 @@ nvidia2guest() {
   set -x #debug
 
   # rmmod
-  local rmmod_log=$(sudo rmmod nvidia_drm nvidia_modeset nvidia_uvm nvidia)
+  local rmmod_log=$(sudo rmmod nvidia_drm nvidia_uvm nvidia_modeset nvidia)
   if [[ $? -eq 0 ]]; then
     echo "✔ NVIDIA drivers removed"
   else
@@ -12,7 +12,7 @@ nvidia2guest() {
   fi
 
   # -i: --ignore-install
-  sudo modprobe -i vfio_pci vfio_pci_core vfio_iommu_type1 &&\
+  sudo modprobe -i vfio_pci vfio vfio_pci_core vfio_iommu_type1 &&\
   echo "✔ VFIO drivers added" || { echo "❌ VFIO drivers not added" && exit 1; }
 
   for k in $GPU_KEY; do

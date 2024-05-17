@@ -108,6 +108,16 @@ log() {
   # sudo ls /var/log/libvirt/qemu/*-virtiofsd.log && sudo kill $(lsof -t /var/log/libvirt/qemu/*-virtiofsd.log)
   lsmod | grep -i nvidia --color=always
   sudo lsof -w /dev/nvidia*
+  echo "💡Tips: If there's some app using gpu, kill it.(except Xorg because it's window manager)
+  If there's still 3 Xorg, check start up service, make sure no X SERVER SETTINGS or Support for NVIDIA Prime !!!"
+
+  # share/egl/egl_external_platform.d
+  # sudo fuser /dev/nvidia*
+  # xrandr --listproviders
+  # grep -i "nvidia(g0)" /var/log/Xorg.0.log -C 3
+
+  # inxi -Fxxxrz
+  
 }
 
 launch_looking_glass() {
@@ -153,6 +163,11 @@ EndSection" | sudo tee $XORG_CONFIG > /dev/null &&\
   #   sudo sed -i "s/MESA_LOADER_DRIVER_OVERRIDE=\(.*\)/MESA_LOADER_DRIVER_OVERRIDE=$XORG_DRIVER_NAME/" /etc/environment ||\
   #   echo 'MESA_LOADER_DRIVER_OVERRIDE=$XORG_DRIVER_NAME' | sudo tee -a /etc/environment &&\
   #   echo "⚠️ Fixed wayland only use $XORG_DRIVER_NAME" ;}
+
+  # https://www.reddit.com/r/VFIO/comments/14rggy2/unbind_gpu_without_restarting_xorg_or_wayland/
+  # https://download.nvidia.com/XFree86/Linux-x86_64/440.64/README/primerenderoffload.html
+  # sudo nvidia-xconfig
+  
 }
 checkAndFix() {
   echo "🔧 restarting service, should in < 15s"
@@ -176,7 +191,7 @@ checkAndFix() {
   grep vfio /etc/modules > /dev/null && echo "✔ vfio enable" ||\
   { echo "vfio" | sudo tee -a /etc/modules >/dev/null && sudo update-initramfs -u -k all && echo "⚠️ Fixed, reboot to enable vfio startup" || echo "❌ Fail to fix vfio startup"; }
   lsmod | grep vfio > /dev/null && echo "✔ vfio running" || echo "⚠️ vfio not running"
-  # fix_xorg
+  fix_xorg
 }
 
 xml_optimize() {
@@ -244,7 +259,10 @@ elif [[ "$1" == "setup" || "$1" == "s" ]]; then
   vd=${vd%?}
   sudo grep "ids=$vd" /etc/modprobe.d/vfio.conf > /dev/null && echo "✔ vfio-pci option $vd" ||\
   (
-    echo "options vfio-pci ids=$vd" | sudo tee /etc/modprobe.d/vfio.conf &&\
+    echo "softdep drm pre: vfio-pci
+softdep amdgpu pre: vfio-pci
+softdep snd_hda_intel pre: vfio-pci
+options vfio-pci ids=$vd" | sudo tee /etc/modprobe.d/vfio.conf &&\
 # echo "options vfio-pci disable_idle_d3=1
 # options vfio-pci disable_vga=1"  | sudo tee /etc/modprobe.d/vfio.conf &&\
     echo "⚠️ Reboot to enable vfio-pci"
@@ -258,8 +276,6 @@ elif [[ "$1" == "install" || "$1" == "i" ]]; then
   install
 elif [[ "$1" == "uninstall" || "$1" == "u" ]]; then
   Yn "uninstall?" && uninstall
-elif [[ "$1" == "what" ]]; then
-  what_gpu
 elif [[ "$1" == "lo"* ]]; then
   log
 elif [[ "$1" == "looking" ]]; then
