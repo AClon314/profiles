@@ -15,7 +15,7 @@ lspci_grep() {
 }
 get_pci() {
   nr=${2:-1}
-  # choose $0 of first line, with replaced ':'&'.' to '_'
+  # choose $0 of first line, 0A:00.0 -> 0A_00_0
   lspci_grep $1 | awk -v nr="$nr" 'NR==nr {print $1}' | tr ':.' '_'
 }
 get_v_d () {
@@ -108,16 +108,6 @@ log() {
   # sudo ls /var/log/libvirt/qemu/*-virtiofsd.log && sudo kill $(lsof -t /var/log/libvirt/qemu/*-virtiofsd.log)
   lsmod | grep -i nvidia --color=always
   sudo lsof -w /dev/nvidia*
-  echo "💡Tips: If there's some app using gpu, kill it.(except Xorg because it's window manager)
-  If there's still 3 Xorg, check start up service, make sure no X SERVER SETTINGS or Support for NVIDIA Prime !!!"
-
-  # share/egl/egl_external_platform.d
-  # sudo fuser /dev/nvidia*
-  # xrandr --listproviders
-  # grep -i "nvidia(g0)" /var/log/Xorg.0.log -C 3
-
-  # inxi -Fxxxrz
-  
 }
 
 launch_looking_glass() {
@@ -129,7 +119,6 @@ install() {
   echo "🎉 Once you edit files in $DIR0, run
     $0 i
 to update to /etc/libvirt/hooks" | grep "$0 i" -C 9 --color=always
-  # sudo ln -s $DIR0/* /etc/libvirt/hooks/ &&\
 }
 uninstall() {
   ls | xargs -I % sudo rm /etc/libvirt/hooks/%
@@ -144,9 +133,7 @@ h2o_xorg() {
   echo "${segments[0]}:${segments[1]}:${segments[2]}"
 }
 fix_xorg() {
-  # xorg不使用nvidia卡，则无法外接显示器
-  # https://bbs.archlinux.org/viewtopic.php?id=286506
-  # https://stackoverflow.com/questions/18382271/how-can-i-modify-xorg-conf-file-to-force-x-server-to-run-on-a-specific-gpu-i-a
+  # deprecated fix_xorg(), only use it if there's still 3 Xorg using /dev/nvidia*
   local PCI_XORG=$(h2o_xorg ${PCI_GPU[$XORG_KEY]})
   { grep $PCI_XORG $XORG_CONFIG > /dev/null && grep "Driver \"$XORG_DRIVER_NAME\"" $XORG_CONFIG > /dev/null;  } &&\
   echo "✔ xorg only use $XORG_DRIVER_NAME" ||\
@@ -163,35 +150,25 @@ EndSection" | sudo tee $XORG_CONFIG > /dev/null &&\
   #   sudo sed -i "s/MESA_LOADER_DRIVER_OVERRIDE=\(.*\)/MESA_LOADER_DRIVER_OVERRIDE=$XORG_DRIVER_NAME/" /etc/environment ||\
   #   echo 'MESA_LOADER_DRIVER_OVERRIDE=$XORG_DRIVER_NAME' | sudo tee -a /etc/environment &&\
   #   echo "⚠️ Fixed wayland only use $XORG_DRIVER_NAME" ;}
-
-  # https://www.reddit.com/r/VFIO/comments/14rggy2/unbind_gpu_without_restarting_xorg_or_wayland/
-  # https://download.nvidia.com/XFree86/Linux-x86_64/440.64/README/primerenderoffload.html
-  # sudo nvidia-xconfig
-  
 }
 checkAndFix() {
   echo "🔧 restarting service, should in < 15s"
   sudo systemctl restart libvirtd virtlogd
   sudo chmod +x ./*
 
-  if sudo dmesg | grep -e DMAR -e IOMMU > /dev/null; then
-    echo "✔ grub iommu"
+  if { sudo dmesg | grep IOMMU > /dev/null && sudo dmesg | grep nogpumanager > /dev/null; }; then
+    echo "✔ grub iommu, nogpumanager"
   else
-    grep "iommu" /etc/default/grub >/dev/null &&\
-    echo "✔ Skip add iommu in grub" ||\
-    (
-      sudo sed -i 's/GRUB_CMDLINE_LINUX="\(.*\)"/GRUB_CMDLINE_LINUX="\1 iommu=pt amd_iommu=on intel_iommu=on"/' /etc/default/grub &&\
-      sudo update-grub && echo || sudo grub-mkconfig -o /boot/grub/grub.cfg
-      echo "⚠️ Reboot to enable iommu"
-    )
+    sudo sed -i 's/GRUB_CMDLINE_LINUX="\(.*\)"/GRUB_CMDLINE_LINUX="\1 iommu=pt amd_iommu=on intel_iommu=on nogpumanager"/' /etc/default/grub &&\
+    sudo update-grub && echo || sudo grub-mkconfig -o /boot/grub/grub.cfg
+    echo "⚠️ Reboot to enable iommu"
   fi
-  # sudo grep Y /sys/module/nvidia_drm/parameters/modeset >/dev/null && echo "✔ nvidia_drm modeset" || echo "⚠️ nvidia_drm modeset off"
-
+  
   lsmod | grep nouveau > /dev/null && echo "⚠️ nouveau running" || echo "✔ nouveau off"
   grep vfio /etc/modules > /dev/null && echo "✔ vfio enable" ||\
-  { echo "vfio" | sudo tee -a /etc/modules >/dev/null && sudo update-initramfs -u -k all && echo "⚠️ Fixed, reboot to enable vfio startup" || echo "❌ Fail to fix vfio startup"; }
+  { echo "vfio" | sudo tee -a /etc/modules >/dev/null && sudo update-initramfs -u && echo "⚠️ Fixed, reboot to enable vfio startup" || echo "❌ Fail to fix vfio startup"; }
   lsmod | grep vfio > /dev/null && echo "✔ vfio running" || echo "⚠️ vfio not running"
-  fix_xorg
+  # fix_xorg
 }
 
 xml_optimize() {
@@ -223,7 +200,7 @@ echo '
       </source>
       <address type="pci" domain="0x0000" bus="0x06" slot="0x00" function="0x0"/>
     </hostdev>' | grep -e subsystem -e hostdev -C 99 --color=always
-# echo 'gl no???'
+  sudo apt install driverctl
 }
 helpme() {
   echo -e "Usage:\t$0 list|setup|install|uninstall|looking|what|helpme|about"
@@ -259,10 +236,12 @@ elif [[ "$1" == "setup" || "$1" == "s" ]]; then
   vd=${vd%?}
   sudo grep "ids=$vd" /etc/modprobe.d/vfio.conf > /dev/null && echo "✔ vfio-pci option $vd" ||\
   (
-    echo "softdep drm pre: vfio-pci
-softdep amdgpu pre: vfio-pci
-softdep snd_hda_intel pre: vfio-pci
-options vfio-pci ids=$vd" | sudo tee /etc/modprobe.d/vfio.conf &&\
+    echo "options vfio-pci ids=$vd
+blacklist nvdia_drm
+blacklist nvidia
+install nvdia_drm /bin/false
+install nvidia /bin/false" | sudo tee /etc/modprobe.d/vfio.conf &&\
+sudo update-initramfs -u
 # echo "options vfio-pci disable_idle_d3=1
 # options vfio-pci disable_vga=1"  | sudo tee /etc/modprobe.d/vfio.conf &&\
     echo "⚠️ Reboot to enable vfio-pci"
@@ -292,4 +271,3 @@ else
   echo "Invalid command: $1"
   exit 1
 fi
-# getent group

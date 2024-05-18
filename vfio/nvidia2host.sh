@@ -13,7 +13,7 @@ nvidia2host() {
   sudo modprobe -r vfio_pci vfio_pci_core vfio_iommu_type1 vfio &&\
   echo "✔ VFIO drivers removed"
 
-  sudo modprobe -i nvidia nvidia_modeset nvidia_uvm nvidia_drm drm_kms_helper i2c_nvidia_gpu drm &&\
+  sudo modprobe -i nvidia nvidia_modeset nvidia_uvm nvidia_drm &&\
   echo "✔ NVIDIA drivers added"
 
   ./vfio list

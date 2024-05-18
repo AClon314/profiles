@@ -10,3 +10,17 @@ sudo rmmod nvidia_drm
 ```
 
 请注意，卸载 `nvidia_drm` 模块可能会影响到正在使用显卡的应用程序，例如正在运行的图形界面。在卸载这个模块之前，你可能需要先关闭这些应用程序。
+
+```sh
+# https://www.reddit.com/r/VFIO/comments/14rggy2/unbind_gpu_without_restarting_xorg_or_wayland/
+# https://download.nvidia.com/XFree86/Linux-x86_64/440.64/README/primerenderoffload.html
+# sudo nvidia-xconfig
+
+# share/egl/egl_external_platform.d
+# sudo fuser /dev/nvidia*
+# xrandr --listproviders
+# grep -i "nvidia(g0)" /var/log/Xorg.0.log -C 3
+# inxi -Fxxxrz
+
+# getent group
+```
