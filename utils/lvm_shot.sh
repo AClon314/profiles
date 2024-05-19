@@ -48,7 +48,7 @@ config() {
   echo "⚠️reboot to take effect"
   echo "💡Tips: more config in $0"
 }
-enable() {
+regist() {
   sudo bash -c "cat << EOF > /etc/systemd/system/$SELF0.service
 [Unit]
 Description=Run $SELF0.sh at startup
@@ -97,7 +97,7 @@ elif [ "$1" == "recover" ]; then
 elif [ "$1" == "remove" ]; then
   remove
 elif [ "$1" == "enable" ]; then
-  enable
+  regist
 elif [ "$1" == "disable" ]; then
   disable
 elif [ "$1" == "mapper" ]; then

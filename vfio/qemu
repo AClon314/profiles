@@ -1,8 +1,14 @@
 #!/bin/bash
+LANG=zh_CN.UTF-8
+export LC_ALL=$LANG LC_CTYPE=$LANG
+export DISPLAY=:0 XAUTHORITY="/home/n/.Xauthority"
+CUR_PATH=/etc/libvirt/hooks/
+pushd $CUR_PATH
 LOG="/var/log/libvirt/qemu/custom_hooks.log"
 XML=$(cat /etc/libvirt/qemu/$1.xml) # don't use virsh dumpxml, it will stuck
 TITLE=$(echo $XML | xmllint --xpath 'string(/domain/title)' -)
 echo "$TITLE $*" >> $LOG
+
 
 if [[ $TITLE == *"-allgpu"* ]]; then
   case $2 in
@@ -21,13 +27,15 @@ if [[ $TITLE == *"-allgpu"* ]]; then
 elif [[ $TITLE == *"-nvidia"* ]]; then
   case $2 in
     "prepare")
-    echo 3 >> $LOG
-      ./nvidia2guest.sh launch 2>&1 >> $LOG
-      ;;
+    ./nvidia2guest.sh start 2>&1 >> $LOG
+    # echo "where:$(pwd) locale:$(locale)" >> $LOG
+    ;;
 
     "release")
     echo 4 >> $LOG
-      ./nvidia2host.sh launch 2>&1 >> $LOG
-      ;;
+    ./nvidia2host.sh start 2>&1 >> $LOG
+    ;;
   esac
 fi
+
+popd

@@ -34,7 +34,8 @@ len() {
   echo $lenght
 }
 what_dm() {
-  systemctl status display-manager | grep "Display Manager" -A 2
+  basename $(cat /etc/X11/default-display-manager)
+  # systemctl status display-manager | grep "Display Manager" -A 2
 }
 what_gpu() {
   __NV_PRIME_RENDER_OFFLOAD=1
@@ -79,6 +80,7 @@ how_gpu() {
   lspci_grep "Intel.*Integrated Graphics"
 }
 config_gpu() {
+  config DM "$(what_dm)"
   config PCI_GPU[nvidia] $(get_pci "NVIDIA")
   config PCI_AUD[nvidia] $(get_pci "NVIDIA" 2)
   config V_D_GPU[nvidia] $(get_v_d "NVIDIA")
@@ -116,6 +118,7 @@ launch_looking_glass() {
 install() {
   sudo mkdir -p /etc/libvirt/hooks &&\
   sudo cp $DIR0/* /etc/libvirt/hooks/ &&\
+  ./nvidia2guest.sh install && ./nvidia2host.sh install &&\
   echo "🎉 Once you edit files in $DIR0, run
     $0 i
 to update to /etc/libvirt/hooks" | grep "$0 i" -C 9 --color=always
@@ -123,6 +126,7 @@ to update to /etc/libvirt/hooks" | grep "$0 i" -C 9 --color=always
 uninstall() {
   ls | xargs -I % sudo rm /etc/libvirt/hooks/%
   sudo find /etc/libvirt/hooks/ -type l -exec test ! -e {} \; -delete # remove broken symlink
+  ./nvidia2guest.sh uninstall && ./nvidia2host.sh uninstall
 }
 h2o_xorg() {
   # 0A_00_1 to 10:00:1
@@ -237,8 +241,6 @@ elif [[ "$1" == "setup" || "$1" == "s" ]]; then
   sudo grep "ids=$vd" /etc/modprobe.d/vfio.conf > /dev/null && echo "✔ vfio-pci option $vd" ||\
   (
     echo "options vfio-pci ids=$vd
-blacklist nvdia_drm
-blacklist nvidia
 install nvdia_drm /bin/false
 install nvidia /bin/false" | sudo tee /etc/modprobe.d/vfio.conf &&\
 sudo update-initramfs -u
@@ -247,7 +249,7 @@ sudo update-initramfs -u
     echo "⚠️ Reboot to enable vfio-pci"
   )
 
-  uninstall
+  uninstall > /dev/null
   install
   xml_optimize
 elif [[ "$1" == "install" || "$1" == "i" ]]; then
