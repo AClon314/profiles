@@ -4,23 +4,29 @@ DM=lightdm
 SELF0=$(basename $0) 
 FULL0="$(readlink -f "$0")"
 
+# dont use virsh in hooks script, which cause qemu hang !!!
+
 # Re-login to use NVIDIA for host
 nvidia2host() {
-  local VM=$(virsh list --name)
+  lsmod | grep nvidia > /dev/null && echo "❌ NVIDIA drivers are loaded" && return 0
+
+  local VM=$(tty > /dev/null && virsh list --name)
   [[ -n $VM ]] && echo "❌ VM $VM is running, please close it first" && return 1
+
   set -x #debug
 
+  modprobe -r vfio_pci vfio_pci_core vfio_iommu_type1 vfio &&\
+  echo "✔ VFIO drivers removed"
+
   for k in $GPU_KEY; do
-    [[ -n ${PCI_GPU[$k]} ]] && sudo virsh nodedev-reattach "pci_0000_${PCI_GPU[$k]}"
-    # [[ -n ${PCI_AUD[$k]} ]] && sudo virsh nodedev-reattach "pci_0000_${PCI_AUD[$k]}"
+    echo "virsh nodedev-reattach pci_0000_${PCI_GPU[$k]}, ${PCI_AUD[$k]}"
+    [[ -n ${PCI_GPU[$k]} ]] && virsh nodedev-reattach "pci_0000_${PCI_GPU[$k]}"
+    [[ -n ${PCI_AUD[$k]} ]] && virsh nodedev-reattach "pci_0000_${PCI_AUD[$k]}"
   done &&\
   echo "✔ GPU reattached" ||\
   echo "❌ GPU reattach failed"
 
-  sudo modprobe -r vfio_pci vfio_pci_core vfio_iommu_type1 vfio &&\
-  echo "✔ VFIO drivers removed"
-
-  sudo modprobe -i nvidia nvidia_modeset nvidia_uvm nvidia_drm &&\
+  modprobe -i nvidia nvidia_modeset nvidia_uvm nvidia_drm &&\
   echo "✔ NVIDIA drivers added"
 
   # ./vfio list
@@ -42,6 +48,10 @@ uninstall() {
   sudo systemctl disable $SELF0
   sudo rm /etc/systemd/system/$SELF0.service
 }
+start() {
+  nvidia2host
+  lsmod | grep nvidia > /dev/null && systemctl restart $DM
+}
 
 about() {
   echo "目的：在虚拟机关闭后，无缝释放nvidia显卡，交还给主机"
@@ -57,17 +67,16 @@ elif [ "$1" == "launch" ]; then
   nvidia2host
 elif [ "$1" == "start" ]; then
   nvidia2host &&\
-  if zenity --question --title="sudo systemctl restart $DM" --text="Will restart Xorg to release the GPU. Before 'yes', please save all open files, otherwise they will be lost.
+  if zenity --question --title="systemctl restart $DM" --text="Will restart Xorg to release the GPU. Before 'yes', please save all open files, otherwise they will be lost.
 将重启Xorg以归还GPU，请先保存所有打开的文件，否则会丢失
 是，将重启Xorg
 否，将忽略"; then
-    sudo systemctl start $SELF0
+    systemctl start $SELF0
   else
     exit 0
   fi
 elif [ "$1" == "START" ]; then
-  nvidia2host
-  lsmod | grep nvidia && sudo systemctl restart $DM
+  start
 elif [ "$1" == "install" ]; then
   install
   # sudo systemctl enable $SELF0

@@ -27,13 +27,13 @@ if [[ $TITLE == *"-allgpu"* ]]; then
 elif [[ $TITLE == *"-nvidia"* ]]; then
   case $2 in
     "prepare")
-    ./nvidia2guest.sh start 2>&1 >> $LOG
-    # echo "where:$(pwd) locale:$(locale)" >> $LOG
+    ./nvidia2guest.sh start >> $LOG 2>&1
+    # echo "tty:$(tty) where:$(pwd)" >> $LOG
     ;;
 
     "release")
     echo 4 >> $LOG
-    ./nvidia2host.sh start 2>&1 >> $LOG
+    ./nvidia2host.sh start >> $LOG 2>&1
     ;;
   esac
 fi

@@ -8,23 +8,23 @@ nvidia2guest() {
   set -x #debug
 
   # rmmod
-  local rmmod_log=$(sudo rmmod nvidia_drm nvidia_uvm nvidia_modeset nvidia)
+  local rmmod_log=$(rmmod nvidia_drm nvidia_uvm nvidia_modeset nvidia)
   if [[ $? -eq 0 ]]; then
     echo "✔ NVIDIA drivers removed"
   else
-    [[ $rmmod_log != *"is not currently loaded"* ]] && echo "❌ NVIDIA drivers remove" && exit 1;
+    [[ $rmmod_log != *"is not currently loaded"* ]] && echo "❌ NVIDIA drivers remove" && return 1;
   fi
 
   # -i: --ignore-install
-  sudo modprobe -i vfio_pci vfio vfio_pci_core vfio_iommu_type1 &&\
-  echo "✔ VFIO drivers added" || { echo "❌ VFIO drivers not added" && exit 1; }
+  modprobe -i vfio_pci vfio vfio_pci_core vfio_iommu_type1 &&\
+  echo "✔ VFIO drivers added" || { echo "❌ VFIO drivers not added" && return 1; }
 
   for k in $GPU_KEY; do
-    [[ -n ${PCI_GPU[$k]} ]] && sudo virsh nodedev-detach "pci_0000_${PCI_GPU[$k]}" &&\
-    [[ -n ${PCI_AUD[$k]} ]] && sudo virsh nodedev-detach "pci_0000_${PCI_AUD[$k]}"
+    [[ -n ${PCI_GPU[$k]} ]] && virsh nodedev-detach "pci_0000_${PCI_GPU[$k]}" &&\
+    [[ -n ${PCI_AUD[$k]} ]] && virsh nodedev-detach "pci_0000_${PCI_AUD[$k]}"
   done &&\
   echo "✔ GPU detached" ||\
-  { echo "❌ GPU detach failed" && exit 1; }
+  { echo "❌ GPU detach failed" && return 1; }
 
   echo "✔ COMPLETED! confirm success with list" | grep list
   ./vfio list
@@ -53,27 +53,27 @@ uninstall() {
   sudo systemctl disable $SELF0
   sudo rm /etc/systemd/system/$SELF0.service
 }
+start() {
+  lsmod | grep nvidia > /dev/null && systemctl stop $DM
+  nvidia2guest
+  lsmod | grep nvidia > /dev/null || systemctl start $DM
+}
 
 if [ -z "$1" ]; then
   export -f nvidia2guest
 elif [ "$1" == "launch" ]; then
   nvidia2guest
 elif [ "$1" == "start" ]; then
-  zenity --question --title="sudo systemctl restart $DM" --text="Will restart Xorg to release the GPU. Before 'yes', please save all open files, otherwise they will be lost.
+  if ! (lsmod | grep nvidia > /dev/null) || zenity --question --title="systemctl restart $DM" --text="Will restart Xorg to release the GPU. Before 'yes', please save all open files, otherwise they will be lost.
 将重启Xorg以释放GPU，请先保存所有打开的文件，否则会丢失
-是，将重启Xorg
-否，将继续无直通启动"
-  if [[ $? -eq 0 ]]; then
-    sudo systemctl start $SELF0
+是，将重启Xorg桌面
+否，将跳过重启"; then
+    systemctl start $SELF0
   else
     exit 1
   fi
 elif [ "$1" == "START" ]; then
-  lsmod | grep nvidia && {
-    sudo systemctl stop $DM
-    nvidia2guest
-    lsmod | grep nvidia || sudo systemctl start $DM;
-  }
+  start
 elif [ "$1" == "install" ]; then
   install
 elif [ "$1" == "uninstall" ]; then
