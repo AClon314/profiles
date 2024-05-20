@@ -64,10 +64,10 @@ if [ -z "$1" ]; then
 elif [ "$1" == "launch" ]; then
   nvidia2guest
 elif [ "$1" == "start" ]; then
-  if ! (lsmod | grep nvidia > /dev/null) || zenity --question --title="systemctl restart $DM" --text="Will restart Xorg to release the GPU. Before 'yes', please save all open files, otherwise they will be lost.
+  if ! (lsmod | grep nvidia > /dev/null) || zenity --question --title="GPU to VM-直通虚拟机: restart $DM" --text="Will restart Xorg to release the GPU. Before 'yes', please save all open files, otherwise they will be lost.
 将重启Xorg以释放GPU，请先保存所有打开的文件，否则会丢失
-是，将重启Xorg桌面
-否，将跳过重启"; then
+是，将重启Xorg桌面。 Yes, restart Xorg desktop.
+否，不重启，无GPU直通的普通启动。 No, skip restart, normal vm startup"; then
     systemctl start $SELF0
   else
     exit 1

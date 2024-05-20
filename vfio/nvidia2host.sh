@@ -50,7 +50,7 @@ uninstall() {
 }
 start() {
   nvidia2host
-  lsmod | grep nvidia > /dev/null && systemctl restart $DM
+  [ $(sudo lsof -w /dev/nvidia* | grep -c 'Xorg') -eq 0 ] && systemctl restart $DM
 }
 
 about() {
@@ -66,12 +66,11 @@ if [ -z "$1" ]; then
 elif [ "$1" == "launch" ]; then
   nvidia2host
 elif [ "$1" == "start" ]; then
-  nvidia2host &&\
-  if zenity --question --title="systemctl restart $DM" --text="Will restart Xorg to release the GPU. Before 'yes', please save all open files, otherwise they will be lost.
+  if zenity --question --title="GPU to host-归还实体机: restart $DM" --text="Will restart Xorg to release the GPU. Before 'yes', please save all open files, otherwise they will be lost.
 将重启Xorg以归还GPU，请先保存所有打开的文件，否则会丢失
-是，将重启Xorg
-否，将忽略"; then
-    systemctl start $SELF0
+是，将重启Xorg桌面。 Yes, restart Xorg desktop.
+否，不重启桌面，保留直通状态。 No, keep GPU passthrough, don't restart"; then
+    start
   else
     exit 0
   fi
