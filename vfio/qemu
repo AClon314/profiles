@@ -1,16 +1,23 @@
 #!/bin/bash
+CUR_PATH=/etc/libvirt/hooks/
+pushd $CUR_PATH && . ./config.conf
+
 LANG=zh_CN.UTF-8
 export LC_ALL=$LANG LC_CTYPE=$LANG
-export DISPLAY=:0 XAUTHORITY="/home/n/.Xauthority"
-CUR_PATH=/etc/libvirt/hooks/
-pushd $CUR_PATH
+export DISPLAY=:0 XAUTHORITY="/home/$USER/.Xauthority"
 LOG="/var/log/libvirt/qemu/custom_hooks.log"
+
+
 XML=$(cat /etc/libvirt/qemu/$1.xml) # don't use virsh dumpxml, it will stuck
 TITLE=$(echo $XML | xmllint --xpath 'string(/domain/title)' -)
-echo "$TITLE $*" >> $LOG
+
+CONST_XML=/domain/devices/hostdev/source/address
+GPU_DEV=$(echo $XML | xmllint --xpath "concat($CONST_XML/@bus, '_', $CONST_XML/@slot, '_', $CONST_XML/@function)" -)
+GPU_DEV=${GPU_DEV//0x/}
+echo "$GPU_DEV $*" >> $LOG
 
 
-if [[ $TITLE == *"-allgpu"* ]]; then
+if [[ $TITLE == *"-noDM"* ]]; then
   case $2 in
     "prepare")
       echo 1 >> $LOG
@@ -24,7 +31,7 @@ if [[ $TITLE == *"-allgpu"* ]]; then
       # ./allGPU2host.sh launch 2>&1 | tee -a /var/log/libvirt/custom_hooks.log
       ;;
   esac
-elif [[ $TITLE == *"-nvidia"* ]]; then
+elif [[ $GPU_DEV == ${PCI_GPU[nvidia]} ]]; then
   case $2 in
     "prepare")
     ./nvidia2guest.sh start >> $LOG 2>&1
