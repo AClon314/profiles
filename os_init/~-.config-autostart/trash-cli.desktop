@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Exec=trash-empty 2
+X-GNOME-Autostart-enabled=true
+NoDisplay=false
+Hidden=false
+Name[zh_CN]=trash-cli
+Comment[zh_CN]=回收站自动清理X天前垃圾
+X-GNOME-Autostart-Delay=100

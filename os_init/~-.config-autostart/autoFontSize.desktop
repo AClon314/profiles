@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Exec=/home/n/document/code/profiles/utils/auto_font_size.sh
+X-GNOME-Autostart-enabled=true
+NoDisplay=false
+Hidden=false
+Name[zh_CN]=autoFontSize
+Comment[zh_CN]=根据显示器数量，自动调整字体大小
+X-GNOME-Autostart-Delay=0
