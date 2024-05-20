@@ -19,9 +19,10 @@ python -m pip install --upgrade pip
 pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
 title 💬15days autoclean trash:///
-gsettings set org.cinnamon.desktop.privacy remove-old-temp-files true
-gsettings set org.cinnamon.desktop.privacy remove-old-trash-files true
-gsettings set org.cinnamon.desktop.privacy old-files-age 15
+sudo apt install trash-cli
+# gsettings set org.cinnamon.desktop.privacy remove-old-temp-files true
+# gsettings set org.cinnamon.desktop.privacy remove-old-trash-files true
+# gsettings set org.cinnamon.desktop.privacy old-files-age 15
 
 title 💬fsearch fzf copyq
 sudo apt install -y fzf copyq
@@ -49,7 +50,8 @@ cd ~/auto-cpufreq && sudo ./auto-cpufreq-installer
 cd ..
 
 title 💬cinnamon fix
-sudo apt install -y numlockx
+sudo apt install -y numlockx dconf-editor
+cp -n ./~-.config-autostart/* ~/.config/autostart/
 
 title 💬virt-manager
 sudo apt install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils virt-manager
