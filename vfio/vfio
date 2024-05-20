@@ -81,6 +81,7 @@ how_gpu() {
 }
 config_gpu() {
   config DM "$(what_dm)"
+  config USER "$(whoami)"
   config PCI_GPU[nvidia] $(get_pci "NVIDIA")
   config PCI_AUD[nvidia] $(get_pci "NVIDIA" 2)
   config V_D_GPU[nvidia] $(get_v_d "NVIDIA")
@@ -163,14 +164,17 @@ checkAndFix() {
   if { sudo dmesg | grep IOMMU > /dev/null && sudo dmesg | grep nogpumanager > /dev/null; }; then
     echo "✔ grub iommu, nogpumanager"
   else
-    sudo sed -i 's/GRUB_CMDLINE_LINUX="\(.*\)"/GRUB_CMDLINE_LINUX="\1 iommu=pt amd_iommu=on intel_iommu=on nogpumanager"/' /etc/default/grub &&\
+    sudo sed -i 's/GRUB_CMDLINE_LINUX="\(.*\)"/GRUB_CMDLINE_LINUX="\1 iommu=pt amd_iommu=on intel_iommu=on rd.driver.pre=vfio-pci nogpumanager"/' /etc/default/grub &&\
     sudo update-grub && echo || sudo grub-mkconfig -o /boot/grub/grub.cfg
     echo "⚠️ Reboot to enable iommu"
   fi
   
   lsmod | grep nouveau > /dev/null && echo "⚠️ nouveau running" || echo "✔ nouveau off"
   grep vfio /etc/modules > /dev/null && echo "✔ vfio enable" ||\
-  { echo "vfio" | sudo tee -a /etc/modules >/dev/null && sudo update-initramfs -u && echo "⚠️ Fixed, reboot to enable vfio startup" || echo "❌ Fail to fix vfio startup"; }
+  { echo "vfio
+vfio_pci
+vfio_pci_core
+vfio_iommu_type1" | sudo tee -a /etc/modules >/dev/null && sudo update-initramfs -u && echo "⚠️ Fixed, reboot to enable vfio startup" || echo "❌ Fail to fix vfio startup"; }
   lsmod | grep vfio > /dev/null && echo "✔ vfio running" || echo "⚠️ vfio not running"
   # fix_xorg
 }
