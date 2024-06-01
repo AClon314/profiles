@@ -1,12 +1,17 @@
 #!/bin/bash
 
+dpkg_old() {
+  dpkg-query --show "$1" | cut -f1 | grep -v "$(uname -r)"
+}
+
 clean_old_kernel() {
   # https://serverfault.com/questions/1098556/how-to-cleanup-usr-lib-modules-and-usr-lib-x86-64-linux-gnu
-  sudo apt remove $(dpkg-query --show 'linux-modules-*' | cut -f1 | grep -v "$(uname -r)")
+  sudo apt remove $(dpkg_old 'linux-modules-*') $(dpkg_old 'linux-headers-*') $(dpkg-query --show 'linux-hwe-*-headers-*' | cut -f1 | grep -v "$(uname -r|sed 's/-generic//')")
 }
 
 clean_deb() {
-  sudo apt-get remove --purge `deborphan`
+  sudo dpkg --purge $(dpkg -l | grep '^rc' | awk '{print $2}')
+  sudo apt remove --purge `deborphan`
 }
 
 list_deb() {
@@ -21,6 +26,6 @@ if [ -z "$1" ]; then
 elif [[ "$1" == "l"* ]]; then
   list_deb
 elif [ "$1" == "clean" ]; then
-  # clean_old_kernel
+  clean_old_kernel
   clean_deb
 fi
