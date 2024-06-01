@@ -8,7 +8,7 @@ nvidia2guest() {
   set -x #debug
 
   # rmmod
-  local rmmod_log=$(rmmod nvidia_drm nvidia_uvm nvidia_modeset nvidia)
+  local rmmod_log=$(rmmod nvidia_drm nvidia_uvm nvidia_modeset nvidia snd_hda_intel)
   if [[ $? -eq 0 ]]; then
     echo "✔ NVIDIA drivers removed"
   else

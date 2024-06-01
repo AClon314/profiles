@@ -26,7 +26,7 @@ nvidia2host() {
   echo "✔ GPU reattached" ||\
   echo "❌ GPU reattach failed"
 
-  modprobe -i nvidia nvidia_modeset nvidia_uvm nvidia_drm &&\
+  modprobe -i nvidia nvidia_modeset nvidia_uvm nvidia_drm snd_hda_intel &&\
   echo "✔ NVIDIA drivers added"
 
   # ./vfio list
