@@ -2,12 +2,12 @@ FULL0="$(readlink -f "$0")"
 DIR0=$(dirname $FULL0)
 
 # 判断显示器个数
-monitor_count=$(xrandr | grep -c ' connected')
-if [ $monitor_count -gt 1 ]; then
-    # 多显示器
+monitor_count=$(xrandr | grep -c 'DP-1-2 connected')
+if [ $monitor_count -gt 0 ]; then
+    # 外置显示器
     gsettings set org.cinnamon.desktop.interface text-scaling-factor 1.0
 else
-    # 单显示器
+    # 内置显示器
     gsettings set org.cinnamon.desktop.interface text-scaling-factor 1.2
 
     lsmod | grep nvidia > /dev/null &&\
