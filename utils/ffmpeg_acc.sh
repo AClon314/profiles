@@ -20,7 +20,7 @@ SUBTITLE=$(eval find "$IN_DIR" -maxdepth 1 -type f $(find_name_args) -not -name 
 
 # OUT_DIR="$IN_DIR/" # comment this line to output to the script directory
 OUTPUT=${2:-"${OUT_DIR}${INPUT%.*},.mp4"}
-fps=20
+fps=15
 
 v_scale=5 # default: 1
 # v_size=320x180
