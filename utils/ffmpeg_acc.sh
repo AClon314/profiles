@@ -1,25 +1,43 @@
 #!/bin/bash
-OUTPUT=output.mp4
-FPS=15
+INPUT=$(basename "$1")
+IN_DIR=$(dirname "$1")
 
-V_SCALE=4 # default: 1
-# V_SIZE=320x180
+function find_name_args() {
+  declare -a SUB_SUFFIX=("srt" "ass" "ssa")
+  RESULT=""
+  for suffix in "${SUB_SUFFIX[@]}"; do
+    if [ -z "$RESULT" ]; then
+      RESULT="-name \"${INPUT%.*}.$suffix\""
+    else
+      RESULT="$RESULT -o -name \"${INPUT%.*}.$suffix\""
+    fi
+  done
+  echo $RESULT
+}
+# 查找同名字幕文件
+SUBTITLE=$(eval find "$IN_DIR" -maxdepth 1 -type f $(find_name_args) -not -name "$INPUT" | head -n 1)
+[ -n "$SUBTITLE" ] && ARG_SUB="-vf subtitles=$SUBTITLE"
 
-# CRF: h264; Q_V: h264_nvenc
-CRF=35
-Q_V=70
+# OUT_DIR="$IN_DIR/" # comment this line to output to the script directory
+OUTPUT=${2:-"${OUT_DIR}${INPUT%.*}.mp4"}
+fps=20
 
-[[ -n "$V_SCALE" && "$V_SCALE" -gt 0 ]] && ARG_V_SIZE="-vf scale=iw/$V_SCALE:ih/$V_SCALE"
-[ -n "$V_SIZE" ] && ARG_V_SIZE="-s $V_SIZE"
+v_scale=5 # default: 1
+# v_size=320x180
 
-[ -n "$Q_V" ] && ARG_Q="-q:v $Q_V" && ARG_CV_I="-hwaccel cuda -c:v h264_cuvid" && ARG_CV_O="-c:v h264_nvenc"
-[ -n "$CRF" ] && ARG_Q="-crf $CRF" && ARG_CV_I="-c:v h264" && ARG_CV_O="-c:v h264"
+# crf: h264; q_v: h264_nvenc
+crf=26
+q_v=70
 
-[ -n "$2" ] && OUTPUT=$2
+[[ -n "$v_scale" && "$v_scale" -gt 0 ]] && ARG_v_size="-vf scale=iw/$v_scale:ih/$v_scale"
+[ -n "$v_size" ] && ARG_v_size="-s $v_size"
+
+[ -n "$q_v" ] && ARG_Q="-q:v $q_v" && ARG_CV_I="-hwaccel cuda -c:v h264_cuvid" && ARG_CV_O="-c:v h264_nvenc"
+[ -n "$crf" ] && ARG_Q="-crf $crf" && ARG_CV_I="-c:v h264" && ARG_CV_O="-c:v h264"
 
 CMD="ffmpeg -threads 0 $ARG_CV_I 
 -i $1 
--preset fast $ARG_CV_O $ARG_Q -r $FPS $ARG_V_SIZE
+-preset fast $ARG_CV_O $ARG_Q -r $fps $ARG_v_size
 $OUTPUT"
 
 echo $CMD
