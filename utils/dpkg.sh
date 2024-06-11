@@ -14,6 +14,11 @@ clean_deb() {
   sudo apt remove --purge `deborphan`
 }
 
+clean_coredump_journal() {
+  sudo journalctl --vacuum-size=1G
+  systemd-tmpfiles --clean
+}
+
 list_deb() {
   dpkg-query -Wf '${Installed-Size}\t${Package}\n' | sort -n | awk '{total += $1} {print $0} END {print total " KB\tTotal size"}' | less +G
 }
