@@ -22,7 +22,7 @@ SUBTITLE=$(eval find "$IN_DIR" -maxdepth 1 -type f $(find_name_args) -not -name 
 OUTPUT=${2:-"${OUT_DIR}${INPUT%.*},.mp4"}
 fps=15
 
-v_scale=5 # default: 1
+v_scale=1 # default: 1
 # v_size=320x180
 
 # crf: h264; q_v: h264_nvenc
