@@ -17,6 +17,7 @@ clean_deb() {
 clean_coredump_journal() {
   sudo journalctl --vacuum-size=1G
   systemd-tmpfiles --clean
+  sudo rm -r /var/lib/systemd/coredump/*
 }
 
 list_deb() {
@@ -31,6 +32,9 @@ if [ -z "$1" ]; then
 elif [[ "$1" == "l"* ]]; then
   list_deb
 elif [ "$1" == "clean" ]; then
+  set -x
   clean_old_kernel
+  clean_coredump_journal
   clean_deb
+  set +x
 fi
