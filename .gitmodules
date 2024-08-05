@@ -1,0 +1,3 @@
+[submodule "proxy/metacubexd"]
+	path = proxy/metacubexd
+	url = https://github.com/MetaCubeX/metacubexd.git
